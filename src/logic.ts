@@ -104,9 +104,10 @@ export function isFullTime(live: Live, now: number): boolean {
   return gameSecs(live, now) >= FULL - 1e-6;
 }
 
-/** Approve is only live at a 10/20/30 stop, once per stop. */
+/** Approve is only live at a 10/20/30 stop, once per stop, and only if there are subs to bring on. */
 export function canApprove(live: Live, now: number): boolean {
   if (!atStop(live, now) || isFullTime(live, now)) return false;
+  if (!live.players.some(p => !p.pos)) return false; // no subs: nothing to approve
   return !live.approvedAt.includes(Math.round(gameSecs(live, now)));
 }
 

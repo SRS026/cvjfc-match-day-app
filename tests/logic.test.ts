@@ -112,6 +112,14 @@ describe('approve and OFF NEXT gating', () => {
     expect(suggestionHeader(l, T0)).toEqual({ label: 'Suggested Changes @ 20:00', countdown: '10:00' });
   });
 
+  it('stays greyed out at a stop when there are no subs', () => {
+    const l = newLive(['A', 'B', 'C', 'D', 'E', '', '', '']);
+    l.clock.base = 600;
+    expect(canApprove(l, T0)).toBe(false);
+    expect(showOffNext(l, T0)).toBe(false);
+    expect(suggestionHeader(l, T0).label).toBe('Suggested Changes @ 20:00');
+  });
+
   it('a mid-block injury pause is not a stop', () => {
     const l = newLive();
     l.clock.base = 412;
