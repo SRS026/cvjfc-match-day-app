@@ -50,7 +50,7 @@ function App() {
   return (
     <>
       {onLive ? <Live live={live!} now={now} /> : <Home state={state} />}
-      {onLive && live!.ending && <Summary live={live!} />}
+      {onLive && live!.ending && <Summary live={live!} now={now} />}
       {askResume && live && (
         <div class="overlay" role="dialog" aria-modal="true">
           <div class="dialog">

@@ -33,12 +33,20 @@ function ellipsize(ctx: CanvasRenderingContext2D, text: string, max: number): st
   return t + '…';
 }
 
+let logo: HTMLImageElement | null = null;
+
+/** Load the font and logo while the summary is on screen, so drawing on "Yes" needs no waiting. */
+export async function prepareSummary(): Promise<void> {
+  await document.fonts.load('800 20px "Baloo 2"').catch(() => {});
+  if (!logo) logo = await loadImage('./logo.png').catch(() => null);
+}
+
 /**
  * Draws the Full Time Summary as a PNG, matching the on-screen layout.
- * Drawn directly (no DOM capture library) so it's small, offline and reliable.
+ * Fully synchronous, so it can run inside the "Yes" tap: iOS only allows the
+ * share sheet during the tap itself, and the minutes are only final at that moment.
  */
-export async function renderSummary(rows: SummaryRow[]): Promise<Blob> {
-  await document.fonts.load('800 20px "Baloo 2"').catch(() => {});
+export function drawSummary(rows: SummaryRow[]): Blob {
   const font = (px: number) => `800 ${px}px "Baloo 2", system-ui, sans-serif`;
 
   const rowH = 30, gap = 12, pad = 18;
@@ -55,8 +63,7 @@ export async function renderSummary(rows: SummaryRow[]): Promise<Blob> {
   ctx.fillStyle = '#FFC629';
   ctx.fillRect(0, 0, W, H);
 
-  try {
-    const logo = await loadImage('./logo.png');
+  if (logo) {
     const lh = 70, lw = (logo.width / logo.height) * lh;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,.3)';
@@ -67,7 +74,7 @@ export async function renderSummary(rows: SummaryRow[]): Promise<Blob> {
     ctx.font = font(28);
     ctx.textBaseline = 'middle';
     ctx.fillText('Full Time Summary', 16 + lw + 12, 18 + lh / 2 + 2);
-  } catch {
+  } else {
     ctx.fillStyle = '#141414';
     ctx.font = font(28);
     ctx.textBaseline = 'middle';
@@ -103,15 +110,18 @@ export async function renderSummary(rows: SummaryRow[]): Promise<Blob> {
     ctx.fillText(fmt(r.secs), right, mid);
   });
 
-  return new Promise((res, rej) => canvas.toBlob(b => (b ? res(b) : rej(new Error('toBlob failed'))), 'image/png'));
+  // toDataURL is synchronous (toBlob isn't), keeping us inside the tap.
+  const bin = atob(canvas.toDataURL('image/png').split(',')[1]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: 'image/png' });
 }
 
 export type ShareResult = 'shared' | 'saved' | 'cancelled';
 
 /**
  * Must be called straight from the tap handler (no awaits before it), because
- * iOS only allows navigator.share() during the user's tap. That's why the PNG
- * is rendered ahead of time, when the summary opens.
+ * iOS only allows navigator.share() during the user's tap.
  */
 export async function shareOrSave(blob: Blob, filename: string): Promise<ShareResult> {
   const file = new File([blob], filename, { type: 'image/png' });

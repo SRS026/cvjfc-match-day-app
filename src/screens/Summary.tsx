@@ -1,35 +1,35 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Header } from '../components/Header';
 import { fmt, playerSecs, FULL } from '../clock';
 import { STATUS_COLOURS, status } from '../logic';
-import { renderSummary, shareOrSave } from '../screenshot';
-import { actions } from '../store';
+import { drawSummary, prepareSummary, shareOrSave } from '../screenshot';
+import { actions, getState } from '../store';
 import type { Live } from '../types';
 
-export function Summary({ live }: { live: Live }) {
-  // The clock is paused here, so these numbers are final.
-  const now = Date.now();
-  const rows = live.players
+function summaryRows(live: Live, now: number) {
+  return live.players
     .map(p => ({ id: p.id, name: p.name, secs: playerSecs(live, p.id, now) }))
     .sort((a, b) => Math.floor(a.secs) - Math.floor(b.secs) || a.id - b.id);
+}
 
-  const blob = useRef<Blob | null>(null);
+export function Summary({ live, now }: { live: Live; now: number }) {
+  // The clock keeps running behind this screen until Yes or No, so these update live.
+  const rows = summaryRows(live, now);
   const [toast, setToast] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Render the PNG as soon as the summary opens, so "Yes" can share instantly.
-  useEffect(() => {
-    let alive = true;
-    renderSummary(rows).then(b => alive && (blob.current = b), () => {});
-    return () => void (alive = false);
-  }, []);
+  // Load the font and logo now, so "Yes" can draw and share without waiting.
+  useEffect(() => void prepareSummary(), []);
 
+  // Yes: stop the clock, then draw and share in the same tap (iOS requires it).
   const yes = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      const b = blob.current ?? (await renderSummary(rows));
-      const result = await shareOrSave(b, `cvjfc-game${live.game}-full-time.png`);
+      actions.stopClock();
+      const final = getState().live!;
+      const blob = drawSummary(summaryRows(final, Date.now()));
+      const result = await shareOrSave(blob, `cvjfc-game${final.game}-full-time.png`);
       if (result === 'cancelled') return; // stay on the pop-up; they can try again or tap No
       setToast(true);
       setTimeout(actions.endGame, 1500);

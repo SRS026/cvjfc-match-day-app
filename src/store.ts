@@ -157,12 +157,12 @@ export const actions = {
     });
   },
 
-  /** End Game: pause the clock and show Full Time Summary + Take Screenshot. */
+  /**
+   * End Game: show Full Time Summary + Take Screenshot. The clock keeps running
+   * until Yes or No, so "Back to Game" carries on exactly where play is.
+   */
   askEnd() {
-    liveUpdate(l => {
-      l.clock.runningSince = null;
-      l.ending = true;
-    });
+    liveUpdate(l => void (l.ending = true));
   },
 
   cancelEnd() {
