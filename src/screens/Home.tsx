@@ -67,7 +67,7 @@ export function Home({ state }: { state: AppState }) {
               <input
                 aria-label={`${slot} name`}
                 value={names[i]}
-                placeholder="Type player name"
+                placeholder="Type Player Name"
                 autoComplete="off"
                 autoCapitalize="words"
                 spellcheck={false}
