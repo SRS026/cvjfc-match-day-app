@@ -222,7 +222,9 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
                 <div style={{ fontSize: '15px' }}>{head.label}</div>
                 <div style={{ fontSize: '22px', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{head.countdown}</div>
               </div>
-              {changes.length === 0 && <div style={{ fontSize: '15px', opacity: 0.75 }}>No Subs</div>}
+              {changes.length === 0 && (
+                <div style={{ fontSize: '15px', opacity: 0.75 }}>{bench.length ? 'No changes needed' : 'No Subs'}</div>
+              )}
               {changes.map(c => (
                 <div key={c.onId} class="plan-row">
                   <span style={{ color: '#7EE2A8' }}>{c.onName} On</span>

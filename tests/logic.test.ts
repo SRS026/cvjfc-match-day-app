@@ -106,10 +106,10 @@ describe('approve and OFF NEXT gating', () => {
     expect(canApprove(l, T0 + 60_000)).toBe(false); // running
     settle(l, T0 + 11 * 60_000);
     expect(canApprove(l, T0)).toBe(true);
-    expect(suggestionHeader(l, T0).label).toBe('Changes Now (10:00)');
+    expect(suggestionHeader(l, T0).label).toBe('Stoppage Changes Now (10:00)');
     l.approvedAt.push(600);
     expect(canApprove(l, T0)).toBe(false);
-    expect(suggestionHeader(l, T0)).toEqual({ label: 'Suggested Changes @ 20:00', countdown: '10:00' });
+    expect(suggestionHeader(l, T0)).toEqual({ label: 'Stoppage Changes @ 20:00', countdown: '10:00' });
   });
 
   it('stays greyed out at a stop when there are no subs', () => {
@@ -117,7 +117,7 @@ describe('approve and OFF NEXT gating', () => {
     l.clock.base = 600;
     expect(canApprove(l, T0)).toBe(false);
     expect(showOffNext(l, T0)).toBe(false);
-    expect(suggestionHeader(l, T0).label).toBe('Suggested Changes @ 20:00');
+    expect(suggestionHeader(l, T0).label).toBe('Stoppage Changes @ 20:00');
   });
 
   it('a mid-block injury pause is not a stop', () => {
@@ -127,12 +127,82 @@ describe('approve and OFF NEXT gating', () => {
     expect(showOffNext(l, T0)).toBe(false);
   });
 
-  it('OFF NEXT shows from 35:00 to 40:00, but not at full time', () => {
+  it('OFF NEXT shows in the 35:00 rolling window, but not at full time', () => {
     const l = newLive();
+    l.players.forEach(p => (p.secs = p.pos ? 1500 : 1000));
+    l.clock.base = 34 * 60;
+    expect(showOffNext(l, T0)).toBe(false);
+    expect(suggestionHeader(l, T0).label).toBe('Rolling Changes @ 35:00');
     l.clock.base = 35 * 60;
     expect(showOffNext(l, T0)).toBe(true);
+    expect(suggestionHeader(l, T0)).toEqual({ label: 'Rolling Changes Now (35:00)', countdown: '5:00' });
+    expect(canApprove(l, T0)).toBe(false); // no Approve for rolling changes
     l.clock.base = 2400;
     expect(showOffNext(l, T0)).toBe(false);
     expect(canApprove(l, T0)).toBe(false);
+  });
+});
+
+describe('rolling changes and fairness', () => {
+  it('skips swaps that would not make things fairer', () => {
+    const l = newLive();
+    l.clock.base = 1200;
+    l.players.forEach(p => (p.secs = 1200)); // everyone level
+    expect(suggestions(l, T0)).toHaveLength(0);
+    expect(canApprove(l, T0)).toBe(false);
+  });
+
+  it('after the 20:00 stop, previews the 25:00 rolling change', () => {
+    const l = newLive();
+    l.clock.base = 1200;
+    l.approvedAt.push(600, 1200);
+    expect(suggestionHeader(l, T0)).toEqual({ label: 'Rolling Changes @ 25:00', countdown: '5:00' });
+  });
+
+  // Plays a whole game the way the coaches would: approve at each stop,
+  // make the suggested swaps at 25:00 and 35:00 while the clock keeps running.
+  function playGame(names: string[]) {
+    const l = newLive(names);
+    let now = T0;
+    const apply = () => {
+      for (const c of suggestions(l, now)) {
+        const at = gameSecs(l, now);
+        const on = l.players.find(p => p.id === c.onId)!, off = l.players.find(p => p.id === c.offId)!;
+        on.pos = off.pos; off.pos = null; on.since = off.since = at;
+      }
+    };
+    for (let block = 0; block < 4; block++) {
+      start(l, now);
+      if (block >= 2) {
+        now += 5 * 60_000;
+        settle(l, now);
+        expect(l.clock.runningSince).not.toBeNull(); // clock keeps running at 25:00 / 35:00
+        apply();
+      }
+      now += 20 * 60_000;
+      settle(l, now); // auto-stops at the next 10-minute mark
+      if (canApprove(l, now)) {
+        apply();
+        l.approvedAt.push(Math.round(gameSecs(l, now)));
+      }
+    }
+    expect(gameSecs(l, now)).toBe(2400);
+    return l.players.map(p => p.secs / 60).sort((a, b) => a - b);
+  }
+
+  it('8 players: everyone gets exactly 25 minutes', () => {
+    expect(playGame(squad)).toEqual([25, 25, 25, 25, 25, 25, 25, 25]);
+  });
+
+  it('7 players: everyone within 25–30 minutes', () => {
+    const m = playGame(['A', 'B', 'C', 'D', 'E', 'S1', 'S2', '']);
+    expect(m[0]).toBeGreaterThanOrEqual(25);
+    expect(m.at(-1)).toBeLessThanOrEqual(30);
+  });
+
+  it('6 players: everyone within 30–35 minutes', () => {
+    const m = playGame(['A', 'B', 'C', 'D', 'E', 'S1', '', '']);
+    expect(m[0]).toBeGreaterThanOrEqual(30);
+    expect(m.at(-1)).toBeLessThanOrEqual(35);
   });
 });

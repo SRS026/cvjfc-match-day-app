@@ -1,4 +1,4 @@
-import { BLOCK, FULL, fmt, gameSecs, isRunning, nextStop, playerSecs } from './clock';
+import { BLOCK, FULL, fmt, gameSecs, isRunning, playerSecs } from './clock';
 import { POSITIONS, SLOTS, type GameNo, type Live, type Player, type Pos } from './types';
 
 // ---------- Colour status ----------
@@ -78,22 +78,17 @@ export interface Change {
   pos: Pos;
 }
 
-/** One swap per bench player: most-minutes off, fewest-minutes on, paired in order. */
-export function suggestions(live: Live, now: number): Change[] {
-  const all = ranked(live, now);
-  const pitch = all.filter(p => p.pos).sort(offOrder);
-  const bench = all.filter(p => !p.pos).sort(onOrder);
-  const k = Math.min(pitch.length, bench.length);
-  return pitch.slice(0, k).map((off, i) => ({
-    onId: bench[i].id,
-    onName: bench[i].name,
-    offId: off.id,
-    offName: off.name,
-    pos: off.pos as Pos
-  }));
-}
+// ---------- Change points ----------
 
-// ---------- Stops and gating ----------
+/** Play stops at these (clock auto-stops; Approve button). */
+export const STOPPAGES = [10 * 60, 20 * 60, 30 * 60];
+/** Rolling changes: the clock keeps running; OFF NEXT is a prompt for the coaches. */
+export const ROLLING = [25 * 60, 35 * 60];
+const POINTS = [...STOPPAGES, ...ROLLING].sort((a, b) => a - b);
+const ROLLING_WINDOW = 5 * 60; // 25:00–30:00 and 35:00–40:00
+
+/** A swap must gain at least this much fairness, so a few seconds' difference never triggers one. */
+export const MIN_GAIN = 60;
 
 export function atStop(live: Live, now: number): boolean {
   const c = gameSecs(live, now);
@@ -104,25 +99,75 @@ export function isFullTime(live: Live, now: number): boolean {
   return gameSecs(live, now) >= FULL - 1e-6;
 }
 
-/** Approve is only live at a 10/20/30 stop, once per stop, and only if there are subs to bring on. */
-export function canApprove(live: Live, now: number): boolean {
+/** At a 10/20/30 stop that hasn't been approved yet. */
+function pendingStop(live: Live, now: number): boolean {
   if (!atStop(live, now) || isFullTime(live, now)) return false;
-  if (!live.players.some(p => !p.pos)) return false; // no subs: nothing to approve
   return !live.approvedAt.includes(Math.round(gameSecs(live, now)));
 }
 
-/** OFF NEXT: at a 10/20/30 stop until approved, and from 35:00 to 40:00 for rolling subs. */
+/** The rolling point (25:00 or 35:00) whose window we're in, if any. */
+function rollingNow(c: number): number | null {
+  return ROLLING.find(r => c >= r - 1e-6 && c < r + ROLLING_WINDOW - 1e-6) ?? null;
+}
+
+function nextPoint(c: number): number {
+  return POINTS.find(p => p > c + 1e-6) ?? FULL;
+}
+
+/**
+ * Which change the suggestions are for, and when it happens:
+ * now (at a stop awaiting approval, or inside a rolling window), or the next point.
+ */
+function planTarget(live: Live, now: number): number {
+  const c = gameSecs(live, now);
+  if (pendingStop(live, now) || rollingNow(c) !== null) return c;
+  return nextPoint(c);
+}
+
+/**
+ * Most-minutes off, fewest-minutes on, paired in order, but only where the swap
+ * makes things fairer: by the time of the change, the child coming off must have
+ * played at least MIN_GAIN more than the child coming on. Pointless swaps are left out.
+ */
+export function suggestions(live: Live, now: number): Change[] {
+  const all = ranked(live, now);
+  const pitch = all.filter(p => p.pos).sort(offOrder);
+  const bench = all.filter(p => !p.pos).sort(onOrder);
+  // Everyone on the pitch gains the same time before the change, so ranking is unaffected;
+  // only the "does it help?" check needs the projected minutes.
+  const ahead = Math.max(0, planTarget(live, now) - gameSecs(live, now));
+  const out: Change[] = [];
+  for (let i = 0; i < Math.min(pitch.length, bench.length); i++) {
+    const off = pitch[i], on = bench[i];
+    if (off.secs + ahead - on.secs < MIN_GAIN) break; // later pairs are even closer
+    out.push({ onId: on.id, onName: on.name, offId: off.id, offName: off.name, pos: off.pos as Pos });
+  }
+  return out;
+}
+
+// ---------- Gating ----------
+
+/** Approve is only live at a 10/20/30 stop, once per stop, and only if there's a change worth making. */
+export function canApprove(live: Live, now: number): boolean {
+  return pendingStop(live, now) && suggestions(live, now).length > 0;
+}
+
+/** OFF NEXT: at a 10/20/30 stop until approved, and during the 25:00 and 35:00 rolling windows. */
 export function showOffNext(live: Live, now: number): boolean {
   const c = gameSecs(live, now);
-  return canApprove(live, now) || (c >= 35 * 60 && c < FULL - 1e-6);
+  return (pendingStop(live, now) || rollingNow(c) !== null) && suggestions(live, now).length > 0;
 }
 
 export function suggestionHeader(live: Live, now: number): { label: string; countdown: string } {
   const c = gameSecs(live, now);
   if (isFullTime(live, now)) return { label: 'Full time', countdown: '0:00' };
-  if (canApprove(live, now)) return { label: `Changes Now (${Math.round(c / 60)}:00)`, countdown: '0:00' };
-  const stop = nextStop(c);
-  return { label: `Suggested Changes @ ${stop / 60}:00`, countdown: fmt(Math.max(0, stop - c)) };
+  const pending = suggestions(live, now).length > 0;
+  if (pending && pendingStop(live, now)) return { label: `Stoppage Changes Now (${Math.round(c / 60)}:00)`, countdown: '0:00' };
+  const r = rollingNow(c);
+  const next = nextPoint(c);
+  if (pending && r !== null) return { label: `Rolling Changes Now (${r / 60}:00)`, countdown: fmt(Math.max(0, next - c)) };
+  const kind = next >= FULL ? 'Full Time' : ROLLING.includes(next) ? 'Rolling Changes' : 'Stoppage Changes';
+  return { label: `${kind} @ ${next / 60}:00`, countdown: fmt(Math.max(0, next - c)) };
 }
 
 export function otherGame(g: GameNo): GameNo {
