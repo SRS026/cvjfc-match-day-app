@@ -97,7 +97,6 @@ input { user-select: text; -webkit-user-select: text; }
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 }
-.big small { font-size: 13px; }
 .end { background: var(--black); color: var(--yellow); border-radius: 16px; padding: 12px; min-height: 56px; font-size: 22px; display: flex; align-items: center; justify-content: center; }
 
 /* Pitch */

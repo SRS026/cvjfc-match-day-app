@@ -128,7 +128,7 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
                 style={{ background: 'var(--green)', opacity: running || fullTime ? 0.45 : 1 }}
                 onClick={actions.startClock}
               >
-                Start Clock<small>Tap to Run</small>
+                Start Clock
               </button>
               <button
                 class="btn big"
@@ -136,7 +136,7 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
                 style={{ background: 'var(--red)', opacity: running ? 1 : 0.45 }}
                 onClick={actions.stopClock}
               >
-                Stop Clock<small>Pause for Injury</small>
+                Stop Clock
               </button>
             </div>
             <button class="btn end" onClick={actions.askEnd}>
