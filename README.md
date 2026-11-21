@@ -1,6 +1,6 @@
 # CVJFC Match Day App
 
-A phone app for the CVJFC Under 8s coaches. It tracks playing time during
+A phone app for the CVJFC coaches. It tracks playing time during
 5-a-side matches and suggests who to bring on and off at each 10-minute stop.
 
 - Everything stays on the phone: no server, no accounts, no analytics.

@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'CVJFC Match Day',
         short_name: 'Match Day',
-        description: 'Fair playing time for the CVJFC Under 8s.',
+        description: 'Fair playing time for CVJFC.',
         theme_color: '#FFC629',
         background_color: '#FFC629',
         display: 'standalone',
