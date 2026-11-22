@@ -38,8 +38,12 @@ export function Live({ live, now, hideTimes, muted }: { live: LiveT; now: number
   }, [running]);
   const fullTime = isFullTime(live, now);
   const secs = (id: number) => playerSecs(live, id, now);
-  const bySecsDesc = (a: { id: number }, b: { id: number }) =>
-    Math.floor(secs(b.id)) - Math.floor(secs(a.id)) || a.id - b.id;
+  // Exact (unrounded) time: players on the pitch all gain time together, so their order never
+  // changes mid-play. Rounding to whole seconds made near-equal players swap places every tick.
+  const bySecsDesc = (a: { id: number }, b: { id: number }) => {
+    const d = secs(b.id) - secs(a.id);
+    return Math.abs(d) > 1e-6 ? d : a.id - b.id;
+  };
 
   const onPitch = live.players.filter(p => p.pos);
   const bench = live.players.filter(p => !p.pos);
