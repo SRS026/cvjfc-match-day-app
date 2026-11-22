@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import type { Pos } from '../types';
 
 type Pt = { x: number; y: number }; // fractions of the pitch box (0–1)
@@ -24,9 +24,9 @@ export interface Piece {
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /**
- * Tactics board: drag players anywhere on the pitch, plus a football.
- * Dragging only moves pieces around the board. A single tap on a player opens the
- * "Move to…" menu, which is the only way positions (and the letters) change.
+ * Tactics board: each piece is a position (GK, CB, …) that can be dragged anywhere,
+ * plus a football. Pieces never move on their own: a single tap opens "Move to…",
+ * and the players' names swap between the two position pieces, which stay put.
  */
 /** Finger travel (px) before a press counts as a drag rather than a tap. */
 const TAP_SLOP = 8;
@@ -40,35 +40,19 @@ export function Tactics({
   onTap: (id: number) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  const [spots, setSpots] = useState<Record<number, Pt>>({});
+  // Board spots belong to positions, so a piece stays put when a different player takes it.
+  const [spots, setSpots] = useState<Partial<Record<Pos, Pt>>>({});
   const [ball, setBall] = useState<Pt>(BALL_HOME);
-  const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
-
-  // When positions change (tap "Move to…" menu), pieces stay exactly where
-  // they are on the board; only the letters in their circles change. A piece still
-  // sitting on its old spot is pinned there so it doesn't jump to its new one.
-  const lastPos = useRef<Record<number, Pos>>({});
-  useLayoutEffect(() => {
-    const changed = pieces.filter(p => lastPos.current[p.id] && lastPos.current[p.id] !== p.pos);
-    if (changed.length) {
-      setSpots(s => {
-        const next = { ...s };
-        for (const p of changed) if (!next[p.id]) next[p.id] = HOME[lastPos.current[p.id]];
-        return next;
-      });
-    }
-    lastPos.current = Object.fromEntries(pieces.map(p => [p.id, p.pos]));
-  });
+  const [drag, setDrag] = useState<{ id: Pos | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
 
   const rect = () => box.current!.getBoundingClientRect();
   const toPt = (e: PointerEvent): Pt => {
     const r = rect();
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
   };
-  // lastPos still holds the old position during the render right after a change, so nothing jumps.
-  const at = (p: Piece) => spots[p.id] ?? HOME[lastPos.current[p.id] ?? p.pos];
+  const at = (pos: Pos) => spots[pos] ?? HOME[pos];
 
-  const handlers = (id: number | 'ball', cur: Pt) => ({
+  const handlers = (id: Pos | 'ball', cur: Pt) => ({
     onPointerDown: (e: PointerEvent) => {
       e.preventDefault();
       try {
@@ -95,8 +79,9 @@ export function Tactics({
       if (!drag || drag.id !== id) return;
       setDrag(null);
       if (id === 'ball') return;
-      // Dragging only moves the piece; positions (letters) change only via a single tap.
-      if (!drag.moved) onTap(id);
+      // Dragging only moves the piece; a single tap opens "Move to…" for its player.
+      const piece = pieces.find(p => p.pos === id);
+      if (!drag.moved && piece) onTap(piece.id);
     },
     onPointerCancel: () => setDrag(null)
   });
@@ -104,16 +89,16 @@ export function Tactics({
   return (
     <div class="tactics" ref={box}>
       {pieces.map(p => {
-        const pt = at(p);
+        const pt = at(p.pos);
         const gk = p.pos === 'GK';
-        const dragging = drag?.id === p.id;
+        const dragging = drag?.id === p.pos;
         return (
           <div
-            key={p.id}
+            key={p.pos}
             class={'tpiece' + (dragging ? ' dragging' : '')}
             style={{ left: pt.x * 100 + '%', top: pt.y * 100 + '%' }}
             aria-label={`Drag ${p.name}, or tap to change position`}
-            {...handlers(p.id, pt)}
+            {...handlers(p.pos, pt)}
           >
             <div
               class="disc"
