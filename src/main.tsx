@@ -19,7 +19,7 @@ enableWhistle();
 // Whistle at the change points: compare the game clock with the previous tick's.
 let lastTick: { game: number; secs: number; at: number } | null = null;
 function listenForWhistle(now: number) {
-  const live = getState().live;
+  const { live, muted } = getState();
   if (!live) {
     lastTick = null;
     return;
@@ -28,7 +28,7 @@ function listenForWhistle(now: number) {
   // Only for a mark passed just now: if the phone was asleep, a late whistle would mislead.
   if (lastTick && lastTick.game === live.game && now - lastTick.at < 2000) {
     const blows = whistleBlows(lastTick.secs, secs);
-    if (blows) blowWhistle(blows);
+    if (blows && !muted) blowWhistle(blows);
   }
   lastTick = { game: live.game, secs, at: now };
 }
@@ -74,7 +74,7 @@ function App() {
 
   return (
     <>
-      {onLive ? <Live live={live!} now={now} hideTimes={!!state.hideTimes} /> : <Home state={state} />}
+      {onLive ? <Live live={live!} now={now} hideTimes={!!state.hideTimes} muted={!!state.muted} /> : <Home state={state} />}
       {onLive && live!.ending && <Summary live={live!} now={now} />}
       {askResume && live && (
         <div class="overlay" role="dialog" aria-modal="true">

@@ -172,6 +172,10 @@ export const actions = {
     update(s => void (s.hideTimes = !s.hideTimes));
   },
 
+  toggleMute() {
+    update(s => void (s.muted = !s.muted));
+  },
+
   /**
    * End Game: show Full Time Summary + Take Screenshot. The clock keeps running
    * until Yes or No, so "Back to Game" carries on exactly where play is.

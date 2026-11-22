@@ -47,4 +47,6 @@ export interface AppState {
   live: Live | null;
   /** Pitch View: hide each player's minutes (device preference). */
   hideTimes?: boolean;
+  /** Whistle at the change points switched off (device preference). */
+  muted?: boolean;
 }

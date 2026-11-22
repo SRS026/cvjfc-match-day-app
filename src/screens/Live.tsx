@@ -5,6 +5,7 @@ import { Tactics } from '../components/Tactics';
 import { fmt, gameSecs, isRunning, playerSecs } from '../clock';
 import { STATUS_COLOURS, canApprove, isFullTime, showOffNext, status, suggestionHeader, suggestions } from '../logic';
 import { actions } from '../store';
+import { blowWhistle } from '../whistle';
 import { POSITIONS, type Live as LiveT, type Pos } from '../types';
 
 // Formation, as % of the pitch box: FWD top, wingers, CB, GK by the bottom goal.
@@ -21,7 +22,7 @@ const SPOTS: Record<Exclude<Pos, 'GK'>, { left: string; top: string }> = {
   CB: { left: '50%', top: `min(46%, calc(${GK_TOP} - ${CB_CLEAR}px))` }
 };
 
-export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideTimes: boolean }) {
+export function Live({ live, now, hideTimes, muted }: { live: LiveT; now: number; hideTimes: boolean; muted: boolean }) {
   // Clock button on = tactics board: times hidden, changes box collapsed, players draggable.
   const tactics = hideTimes;
   const [swap, setSwap] = useState<SwapDraft | null>(null);
@@ -77,8 +78,26 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
     <div class="screen" style={{ background: theme.bg, color: theme.fg, maxWidth: 'none' }}>
       <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'inherit', flexGrow: 1 }}>
         <Header title={`Game ${live.game}`} onLogo={actions.goHome} size={26}>
-          <div class="clock" style={{ background: theme.clockBg, color: theme.clockFg }} aria-label="Game clock">
-            {fmt(clock)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <button
+              class={'btn glass glass-inline' + (pitchView ? '' : ' glass-dark')}
+              aria-label={muted ? 'Whistle off: tap to turn on' : 'Whistle on: tap to turn off'}
+              aria-pressed={muted}
+              onClick={() => {
+                // Turning it back on blows once, so the coach can check the volume.
+                if (muted) blowWhistle(1);
+                actions.toggleMute();
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 5L6 9H2.5v6H6l5 4V5z" />
+                <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+                {muted ? <path d="M3 3l18 18" /> : <path d="M18.5 5.5a9 9 0 0 1 0 13" />}
+              </svg>
+            </button>
+            <div class="clock" style={{ background: theme.clockBg, color: theme.clockFg }} aria-label="Game clock">
+              {fmt(clock)}
+            </div>
           </div>
         </Header>
 

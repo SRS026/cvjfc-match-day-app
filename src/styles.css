@@ -140,6 +140,13 @@ input { user-select: text; -webkit-user-select: text; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .glass::before { content: ''; position: absolute; inset: -4px; } /* 48px touch area */
+/* Whistle on/off, in the header next to the clock. */
+.glass-inline { position: relative; top: auto; right: auto; flex-shrink: 0; }
+/* Smoky glass for the yellow Normal View, where white glass would vanish. */
+.glass-dark {
+  color: var(--black); background: rgba(20, 20, 20, 0.1); border-color: rgba(20, 20, 20, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 6px rgba(0, 0, 0, 0.15);
+}
 /* Make Subs (.pbtn.subs below): same height and shape as End Game on Normal View. */
 .pbtn { border-radius: 14px; padding: 8px 10px; font-size: 16px; line-height: 1.2; min-height: 64px; border: 3px solid var(--yellow); display: flex; align-items: center; justify-content: center; }
 .pbtn.subs { border-radius: 16px; padding: 8px 12px; line-height: 1.1; min-height: 59px; }
