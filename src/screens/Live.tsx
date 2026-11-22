@@ -8,11 +8,17 @@ import { actions } from '../store';
 import { POSITIONS, type Live as LiveT, type Pos } from '../types';
 
 // Formation, as % of the pitch box: FWD top, wingers, CB, GK by the bottom goal.
+/** GK row's top edge (its circle) on the pitch. */
+const GK_TOP = '79.5%';
+/** CB circle + name + OFF NEXT is 122px tall; keep it at least 10px clear of the GK circle. */
+const CB_CLEAR = 132;
+
 const SPOTS: Record<Exclude<Pos, 'GK'>, { left: string; top: string }> = {
   FWD: { left: '50%', top: '3%' },
   LW: { left: '18.5%', top: '23.5%' },
   RW: { left: '81.5%', top: '23.5%' },
-  CB: { left: '50%', top: '46%' }
+  // 46% down on roomy pitches; on shorter ones, moved up just enough to stay clear of the GK.
+  CB: { left: '50%', top: `min(46%, calc(${GK_TOP} - ${CB_CLEAR}px))` }
 };
 
 export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideTimes: boolean }) {
@@ -199,7 +205,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 const pos = p.pos as Pos;
                 const gk = pos === 'GK';
                 const t = secs(p.id);
-                const place = gk ? { left: 'calc(50% - 34px)', top: '79.5%' } : SPOTS[pos];
+                const place = gk ? { left: 'calc(50% - 34px)', top: GK_TOP } : SPOTS[pos];
                 return (
                   <div key={p.id} class={'spot ' + (gk ? 'spot-row' : 'spot-col')} style={place}>
                     <button

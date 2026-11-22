@@ -196,7 +196,7 @@ input { user-select: text; -webkit-user-select: text; }
   .slot select { min-height: 40px; padding-top: 7px; padding-bottom: 7px; }
   .row input { padding: 7px 4px; }
   .tab { min-height: 40px; padding: 6px; }
-  .pitch { min-height: 300px; }
+  .pitch { min-height: 320px; } /* least height where CB clears both FWD and GK */
   .plan { gap: 3px; padding: 8px 12px; }
   .pbtn { min-height: 56px; }
 }
