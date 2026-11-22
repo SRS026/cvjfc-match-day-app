@@ -4,13 +4,34 @@ import './styles.css';
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { registerSW } from 'virtual:pwa-register';
-import { actions, resumedGame, useAppState } from './store';
+import { gameSecs } from './clock';
+import { whistleBlows } from './logic';
+import { actions, getState, resumedGame, useAppState } from './store';
 import { Home } from './screens/Home';
 import { Live } from './screens/Live';
 import { Summary } from './screens/Summary';
 import { keepAwake } from './wakelock';
+import { blowWhistle, enableWhistle } from './whistle';
 
 registerSW({ immediate: true });
+enableWhistle();
+
+// Whistle at the change points: compare the game clock with the previous tick's.
+let lastTick: { game: number; secs: number; at: number } | null = null;
+function listenForWhistle(now: number) {
+  const live = getState().live;
+  if (!live) {
+    lastTick = null;
+    return;
+  }
+  const secs = gameSecs(live, now);
+  // Only for a mark passed just now: if the phone was asleep, a late whistle would mislead.
+  if (lastTick && lastTick.game === live.game && now - lastTick.at < 2000) {
+    const blows = whistleBlows(lastTick.secs, secs);
+    if (blows) blowWhistle(blows);
+  }
+  lastTick = { game: live.game, secs, at: now };
+}
 
 function App() {
   const state = useAppState();
@@ -22,11 +43,15 @@ function App() {
   useEffect(() => {
     const t = setInterval(() => {
       actions.tick();
-      setNow(Date.now());
+      const at = Date.now();
+      listenForWhistle(at);
+      setNow(at);
     }, 250);
     const wake = () => {
       actions.tick();
-      setNow(Date.now());
+      const at = Date.now();
+      listenForWhistle(at);
+      setNow(at);
     };
     document.addEventListener('visibilitychange', wake);
     return () => {

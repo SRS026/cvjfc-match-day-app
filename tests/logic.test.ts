@@ -231,3 +231,22 @@ describe('rolling changes and fairness', () => {
     expect(m.at(-1)).toBeLessThanOrEqual(35);
   });
 });
+
+describe('whistle', () => {
+  it('3 blows at the stops and full time, 2 at the rolling changes', async () => {
+    const { whistleBlows } = await import('../src/logic');
+    expect(whistleBlows(599.8, 600)).toBe(3);
+    expect(whistleBlows(1199.9, 1200)).toBe(3);
+    expect(whistleBlows(1799.75, 1800)).toBe(3);
+    expect(whistleBlows(2399.9, 2400)).toBe(3);
+    expect(whistleBlows(1499.8, 1500.05)).toBe(2);
+    expect(whistleBlows(2099.8, 2100.1)).toBe(2);
+  });
+  it('silent between marks, and never twice for the same mark', async () => {
+    const { whistleBlows } = await import('../src/logic');
+    expect(whistleBlows(300, 300.25)).toBe(0);
+    expect(whistleBlows(600, 600)).toBe(0); // clock sat on 10:00 after stopping
+    expect(whistleBlows(600, 600.25)).toBe(0); // restarted after the stop
+    expect(whistleBlows(1500.05, 1500.3)).toBe(0);
+  });
+});

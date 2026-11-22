@@ -90,6 +90,17 @@ const ROLLING_WINDOW = 5 * 60; // 25:00–30:00 and 35:00–40:00
 /** A swap must gain at least this much fairness, so a few seconds' difference never triggers one. */
 export const MIN_GAIN = 60;
 
+/**
+ * Whistle blows due as the clock moves from `prev` to `cur` (game seconds):
+ * 3 at the stops (10, 20, 30, 40 min), 2 at the rolling changes (25, 35 min), 0 otherwise.
+ */
+export function whistleBlows(prev: number, cur: number): number {
+  let blows = 0;
+  for (const mark of [...STOPPAGES, FULL]) if (prev < mark - 1e-6 && cur >= mark - 1e-6) blows = 3;
+  for (const mark of ROLLING) if (prev < mark - 1e-6 && cur >= mark - 1e-6) blows = Math.max(blows, 2);
+  return blows;
+}
+
 export function atStop(live: Live, now: number): boolean {
   const c = gameSecs(live, now);
   return !isRunning(live) && c > 0 && Math.abs(c / BLOCK - Math.round(c / BLOCK)) < 1e-6;
