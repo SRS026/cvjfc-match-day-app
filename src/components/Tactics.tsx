@@ -28,11 +28,23 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * Dropping a player nearest another position's spot gives them that position
  * (whoever had it takes the dragged player's old one), so the circle letters change.
  */
-export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: number, pos: Pos) => void }) {
+/** Finger travel (px) before a press counts as a drag rather than a tap. */
+const TAP_SLOP = 8;
+
+export function Tactics({
+  pieces,
+  onMove,
+  onTap
+}: {
+  pieces: Piece[];
+  onMove: (id: number, pos: Pos) => void;
+  /** A single press (no drag) on a player: opens the "Move to…" menu. */
+  onTap: (id: number) => void;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const [spots, setSpots] = useState<Record<number, Pt>>({});
   const [ball, setBall] = useState<Pt>(BALL_HOME);
-  const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt } | null>(null);
+  const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
 
   const rect = () => box.current!.getBoundingClientRect();
   const toPt = (e: PointerEvent): Pt => {
@@ -56,12 +68,21 @@ export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: numb
   const handlers = (id: number | 'ball', cur: Pt) => ({
     onPointerDown: (e: PointerEvent) => {
       e.preventDefault();
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      try {
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      } catch {
+        /* pointer already gone: the drag still works without capture */
+      }
       const p = toPt(e);
-      setDrag({ id, off: { x: p.x - cur.x, y: p.y - cur.y } }); // keep the grab point under the finger
+      // Keep the grab point under the finger; remember where the press started.
+      setDrag({ id, off: { x: p.x - cur.x, y: p.y - cur.y }, x0: e.clientX, y0: e.clientY, moved: false });
     },
     onPointerMove: (e: PointerEvent) => {
       if (!drag || drag.id !== id) return;
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < TAP_SLOP) return; // still a tap
+        setDrag({ ...drag, moved: true });
+      }
       const p = toPt(e);
       const next = { x: clamp(p.x - drag.off.x, 0.05, 0.95), y: clamp(p.y - drag.off.y, 0.04, 0.88) };
       if (id === 'ball') setBall(next);
@@ -70,11 +91,15 @@ export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: numb
     onPointerUp: () => {
       if (!drag || drag.id !== id) return;
       setDrag(null);
-      if (id !== 'ball') {
-        const piece = pieces.find(p => p.id === id);
-        const pos = nearest(spots[id] ?? cur);
-        if (piece && pos !== piece.pos) onMove(id, pos);
+      if (id === 'ball') return;
+      if (!drag.moved) {
+        onTap(id);
+        return;
       }
+      // Only now, with the finger lifted, does the position (and its letters) change.
+      const piece = pieces.find(p => p.id === id);
+      const pos = nearest(spots[id] ?? cur);
+      if (piece && pos !== piece.pos) onMove(id, pos);
     },
     onPointerCancel: () => setDrag(null)
   });
@@ -85,14 +110,12 @@ export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: numb
         const pt = at(p);
         const gk = p.pos === 'GK';
         const dragging = drag?.id === p.id;
-        // While dragging, preview the position they'd take if dropped here.
-        const label = dragging && box.current ? nearest(pt) : p.pos;
         return (
           <div
             key={p.id}
             class={'tpiece' + (dragging ? ' dragging' : '')}
             style={{ left: pt.x * 100 + '%', top: pt.y * 100 + '%' }}
-            aria-label={`Drag ${p.name}`}
+            aria-label={`Drag ${p.name}, or tap to change position`}
             {...handlers(p.id, pt)}
           >
             <div
@@ -103,7 +126,7 @@ export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: numb
                 borderColor: p.ring
               }}
             >
-              {label}
+              {p.pos}
             </div>
             <div class="tag">{p.name}</div>
             {p.offNext && <div class="offnext">OFF NEXT</div>}

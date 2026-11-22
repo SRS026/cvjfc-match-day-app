@@ -188,6 +188,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                     offNext: offIds.includes(p.id)
                   }))}
                   onMove={actions.movePos}
+                  onTap={setMenu}
                 />
               )}
 
@@ -223,7 +224,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 );
               })}
 
-              {menuPlayer && !tactics && (
+              {menuPlayer && (
                 <div class="overlay in-pitch" role="dialog" aria-modal="true">
                   <div class="dialog" style={{ padding: '16px' }}>
                     <div style={{ fontSize: '20px', lineHeight: 1.1 }}>Move {menuPlayer.name} to…</div>
