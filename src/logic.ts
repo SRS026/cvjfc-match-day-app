@@ -149,22 +149,45 @@ export function changeMoment(live: Live, now: number): number | null {
   return pendingRolling(live, now);
 }
 
+/** Nobody plays this long in one spell: they come off at the last change before reaching it. */
+export const MAX_ON = 25 * 60;
+/** A child who has sat this long on the bench is first in line to come back on. */
+export const MAX_BENCH = 10 * 60;
+
 /**
- * Most-minutes off, fewest-minutes on, paired in order, but only where the swap
- * makes things fairer: by the time of the change, the child coming off must have
- * played at least MIN_GAIN more than the child coming on. Pointless swaps are left out.
+ * Who goes off and who comes on at the next change.
+ *
+ * 1. Must go off: anyone who would reach 25 minutes in a row before the following change
+ *    (so a starter is off by 20:00, and someone on from 10:00 is off by 30:00).
+ * 2. Must come on: anyone who will have sat 10 minutes or more on the bench by this change.
+ * 3. Everyone else: most minutes off, fewest minutes on, but only where it makes things fairer
+ *    (the child coming off ends up at least MIN_GAIN ahead of the child coming on).
+ *
+ * Players are paired in order; the one coming on takes the position of the one going off.
  */
 export function suggestions(live: Live, now: number): Change[] {
+  const clock = gameSecs(live, now);
+  const target = planTarget(live, now);
+  const following = nextPoint(target); // the next chance to change after this one
+  const since = new Map(live.players.map(p => [p.id, p.since]));
   const all = ranked(live, now);
-  const pitch = all.filter(p => p.pos).sort(offOrder);
-  const bench = all.filter(p => !p.pos).sort(onOrder);
+
+  const mustOff = (r: Ranked) => following - since.get(r.id)! >= MAX_ON - 1e-6;
+  const mustOn = (r: Ranked) => target - since.get(r.id)! >= MAX_BENCH - 1e-6;
+  // Must-go players first, then the usual fairness order.
+  const first = (must: (r: Ranked) => boolean, order: (a: Ranked, b: Ranked) => number) => (a: Ranked, b: Ranked) =>
+    Number(must(b)) - Number(must(a)) || order(a, b);
+
+  const pitch = all.filter(p => p.pos).sort(first(mustOff, offOrder));
+  const bench = all.filter(p => !p.pos).sort(first(mustOn, onOrder));
   // Everyone on the pitch gains the same time before the change, so ranking is unaffected;
   // only the "does it help?" check needs the projected minutes.
-  const ahead = Math.max(0, planTarget(live, now) - gameSecs(live, now));
+  const ahead = Math.max(0, target - clock);
   const out: Change[] = [];
   for (let i = 0; i < Math.min(pitch.length, bench.length); i++) {
     const off = pitch[i], on = bench[i];
-    if (off.secs + ahead - on.secs < MIN_GAIN) break; // later pairs are even closer
+    const needed = mustOff(off) || mustOn(on);
+    if (!needed && off.secs + ahead - on.secs < MIN_GAIN) break; // later pairs are even closer
     out.push({ onId: on.id, onName: on.name, offId: off.id, offName: off.name, pos: off.pos as Pos });
   }
   return out;

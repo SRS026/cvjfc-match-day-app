@@ -151,7 +151,7 @@ describe('rolling changes and fairness', () => {
   it('skips swaps that would not make things fairer', () => {
     const l = newLive();
     l.clock.base = 1200;
-    l.players.forEach(p => (p.secs = 1200)); // everyone level
+    l.players.forEach(p => ((p.secs = 1200), (p.since = 1000))); // everyone level, short spells
     expect(suggestions(l, T0)).toHaveLength(0);
     expect(canApprove(l, T0)).toBe(false);
   });
@@ -189,10 +189,17 @@ describe('rolling changes and fairness', () => {
   function playGame(names: string[]) {
     const l = newLive(names);
     let now = T0;
+    // Longest unbroken spell each child had on the pitch and on the bench (minutes).
+    const longestOn = new Map<number, number>(), longestBench = new Map<number, number>();
+    const spell = (p: Live['players'][number], at: number) => {
+      const map = p.pos ? longestOn : longestBench;
+      map.set(p.id, Math.max(map.get(p.id) ?? 0, (at - p.since) / 60));
+    };
     const apply = () => {
       for (const c of suggestions(l, now)) {
         const at = gameSecs(l, now);
         const on = l.players.find(p => p.id === c.onId)!, off = l.players.find(p => p.id === c.offId)!;
+        spell(on, at); spell(off, at);
         on.pos = off.pos; off.pos = null; on.since = off.since = at;
       }
     };
@@ -212,23 +219,54 @@ describe('rolling changes and fairness', () => {
       }
     }
     expect(gameSecs(l, now)).toBe(2400);
-    return l.players.map(p => p.secs / 60).sort((a, b) => a - b);
+    for (const p of l.players) spell(p, 2400);
+    const minutes = l.players.map(p => p.secs / 60).sort((a, b) => a - b);
+    return { minutes, maxOn: Math.max(...longestOn.values()), maxBench: Math.max(0, ...longestBench.values()) };
   }
 
-  it('8 players: everyone gets exactly 25 minutes', () => {
-    expect(playGame(squad)).toEqual([25, 25, 25, 25, 25, 25, 25, 25]);
+  it('8 players: everyone gets 25 minutes, nobody 25 in a row, nobody benched over 10', () => {
+    const g = playGame(squad);
+    expect(g.minutes).toEqual([25, 25, 25, 25, 25, 25, 25, 25]);
+    expect(g.maxOn).toBeLessThan(25);
+    expect(g.maxBench).toBeLessThanOrEqual(10);
   });
 
-  it('7 players: everyone within 25–30 minutes', () => {
-    const m = playGame(['A', 'B', 'C', 'D', 'E', 'S1', 'S2', '']);
-    expect(m[0]).toBeGreaterThanOrEqual(25);
-    expect(m.at(-1)).toBeLessThanOrEqual(30);
+  it('7 players: everyone within 25–30 minutes, nobody benched over 10', () => {
+    const g = playGame(['A', 'B', 'C', 'D', 'E', 'S1', 'S2', '']);
+    expect(g.minutes[0]).toBeGreaterThanOrEqual(25);
+    expect(g.minutes.at(-1)).toBeLessThanOrEqual(30);
+    expect(g.maxBench).toBeLessThanOrEqual(10);
   });
 
-  it('6 players: everyone within 30–35 minutes', () => {
-    const m = playGame(['A', 'B', 'C', 'D', 'E', 'S1', '', '']);
-    expect(m[0]).toBeGreaterThanOrEqual(30);
-    expect(m.at(-1)).toBeLessThanOrEqual(35);
+  it('6 players: everyone within 30–35 minutes, nobody benched over 10', () => {
+    const g = playGame(['A', 'B', 'C', 'D', 'E', 'S1', '', '']);
+    expect(g.minutes[0]).toBeGreaterThanOrEqual(30);
+    expect(g.minutes.at(-1)).toBeLessThanOrEqual(35);
+    expect(g.maxBench).toBeLessThanOrEqual(10);
+  });
+
+  it('3 subs always come on at 10:00', () => {
+    const l = newLive();
+    l.clock.base = 600;
+    l.players.forEach(p => (p.secs = p.pos ? 600 : 0));
+    expect(suggestions(l, T0).map(c => c.onName)).toEqual(['S1', 'S2', 'S3']);
+  });
+
+  it('a starter still on at 20:00 must come off, even if minutes are level', () => {
+    const l = newLive();
+    l.clock.base = 1200;
+    l.players.forEach(p => (p.secs = 1200)); // level minutes (as if edited)
+    for (const p of l.players) p.since = p.pos ? (p.name === 'A' ? 0 : 1000) : 600;
+    const ch = suggestions(l, T0);
+    expect(ch[0].offName).toBe('A');
+  });
+
+  it('a child benched for 10 minutes comes back on, even if minutes are level', () => {
+    const l = newLive();
+    l.clock.base = 1500;
+    l.players.forEach(p => (p.secs = 1200));
+    for (const p of l.players) p.since = p.pos ? 1200 : p.name === 'S1' ? 900 : 1200;
+    expect(suggestions(l, T0).map(c => c.onName)).toEqual(['S1']);
   });
 });
 
