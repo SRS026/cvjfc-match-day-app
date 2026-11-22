@@ -176,7 +176,7 @@ export function showOffNext(live: Live, now: number): boolean {
 
 export function suggestionHeader(live: Live, now: number): { label: string; countdown: string } {
   const c = gameSecs(live, now);
-  if (isFullTime(live, now)) return { label: 'Full time', countdown: '0:00' };
+  if (isFullTime(live, now)) return { label: 'Full Time', countdown: '0:00' };
   const pending = suggestions(live, now).length > 0;
   const next = nextPoint(c);
   if (pending && pendingStop(live, now)) return { label: `Stoppage Changes Now (${Math.round(c / 60)}:00)`, countdown: '0:00' };

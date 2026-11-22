@@ -118,11 +118,32 @@ export function Tactics({ pieces, onMove }: { pieces: Piece[]; onMove: (id: numb
         {...handlers('ball', ball)}
       >
         <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="11" fill="#fff" stroke="#141414" stroke-width="1.4" />
-          <polygon points="12,8 15.8,10.8 14.4,15.2 9.6,15.2 8.2,10.8" fill="#141414" />
-          <g stroke="#141414" stroke-width="1.3" stroke-linecap="round">
-            <path d="M12 8V1.6M15.8 10.8l6-2M14.4 15.2l4 5.2M9.6 15.2l-4 5.2M8.2 10.8l-6-2" />
+          {/* Classic 32-panel ball (black pentagons, white hexagons), drawn from the real geometry. */}
+          <defs>
+            <clipPath id="ball-clip">
+              <circle cx="12" cy="12" r="11" />
+            </clipPath>
+          </defs>
+          <circle cx="12" cy="12" r="11" fill="#fff" />
+          <g clip-path="url(#ball-clip)" stroke="#141414" stroke-width="0.6" stroke-linejoin="round">
+            <polygon points="7.56,22.05 9.78,21.84 14.22,21.84 16.44,22.05 14.22,22.26 9.78,22.26" fill="#fff" />
+            <polygon points="2.60,7.23 3.97,4.48 3.97,5.83 2.60,9.93 1.23,12.68 1.23,11.32" fill="#fff" />
+            <polygon points="20.03,5.83 20.03,4.48 21.40,7.23 22.77,11.32 22.77,12.68 21.40,9.93" fill="#fff" />
+            <polygon points="7.56,1.95 9.78,1.74 7.56,4.14 3.97,5.83 3.97,4.48" fill="#141414" />
+            <polygon points="14.22,1.74 16.44,1.95 20.03,4.48 20.03,5.83 16.44,4.14" fill="#141414" />
+            <polygon points="2.60,16.77 4.82,16.56 8.41,19.09 9.78,21.84 7.56,22.05 3.97,19.52" fill="#fff" />
+            <polygon points="15.59,19.09 19.18,16.56 21.40,16.77 20.03,19.52 16.44,22.05 14.22,21.84" fill="#fff" />
+            <polygon points="1.23,12.68 2.60,9.93 4.82,12.33 4.82,16.56 2.60,16.77" fill="#141414" />
+            <polygon points="19.18,12.33 21.40,9.93 22.77,12.68 21.40,16.77 19.18,16.56" fill="#141414" />
+            <polygon points="9.78,1.74 14.22,1.74 16.44,4.14 14.22,6.54 9.78,6.54 7.56,4.14" fill="#fff" />
+            <polygon points="8.41,19.09 12.00,17.39 15.59,19.09 14.22,21.84 9.78,21.84" fill="#141414" />
+            <polygon points="3.97,5.83 7.56,4.14 9.78,6.54 8.41,10.63 4.82,12.33 2.60,9.93" fill="#fff" />
+            <polygon points="14.22,6.54 16.44,4.14 20.03,5.83 21.40,9.93 19.18,12.33 15.59,10.63" fill="#fff" />
+            <polygon points="4.82,12.33 8.41,10.63 12.00,13.16 12.00,17.39 8.41,19.09 4.82,16.56" fill="#fff" />
+            <polygon points="12.00,13.16 15.59,10.63 19.18,12.33 19.18,16.56 15.59,19.09 12.00,17.39" fill="#fff" />
+            <polygon points="9.78,6.54 14.22,6.54 15.59,10.63 12.00,13.16 8.41,10.63" fill="#141414" />
           </g>
+          <circle cx="12" cy="12" r="11" fill="none" stroke="#141414" stroke-width="1.2" />
         </svg>
       </div>
     </div>

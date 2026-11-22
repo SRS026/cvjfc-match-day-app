@@ -160,11 +160,22 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 aria-pressed={hideTimes}
                 onClick={actions.toggleTimes}
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="8.5" />
-                  <path d="M12 7.5V12l3 2" />
-                  {hideTimes && <path d="M4 4l16 16" />}
-                </svg>
+                {tactics ? (
+                  // In tactics mode: a clock, to go back to the normal view with times.
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M12 7.5V12l3 2" />
+                  </svg>
+                ) : (
+                  // Normal view: a tactics-board icon (X, O and a play arrow).
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3.5 3.5l5 5M8.5 3.5l-5 5" />
+                    <circle cx="17.5" cy="17.5" r="3" />
+                    <path d="M7 12.5c0 4.5 2.5 6 6.5 5.5" stroke-dasharray="2 2.6" />
+                    <path d="M11 4.5c3.5 0 6 1.5 6.5 5" />
+                    <path d="M15.2 8.4l2.3 1.6 1.7-2.2" />
+                  </svg>
+                )}
               </button>
 
               {tactics && (
@@ -257,7 +268,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
               </div>
               <div class="plan-body">
                 <div class="plan-list">
-                  {changes.length === 0 ? (
+                  {fullTime ? null : changes.length === 0 ? (
                     <div class="plan-empty">{bench.length ? 'No changes needed' : 'No Subs'}</div>
                   ) : (
                     changes.map(c => (
