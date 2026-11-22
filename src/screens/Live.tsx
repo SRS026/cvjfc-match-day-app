@@ -307,7 +307,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
               style={{ color: '#fff', width: '100%', opacity: bench.length ? 1 : 0.4 }}
               onClick={openManual}
             >
-              Make Manual Changes
+              Make Subs
             </button>
           </>
         )}
