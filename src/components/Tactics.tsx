@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { POSITIONS, type Pos } from '../types';
 
 type Pt = { x: number; y: number }; // fractions of the pitch box (0–1)
@@ -45,6 +45,24 @@ export function Tactics({
   const [spots, setSpots] = useState<Record<number, Pt>>({});
   const [ball, setBall] = useState<Pt>(BALL_HOME);
   const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
+
+  // When positions change from the tap "Move to…" menu, snap both players to their
+  // new position's spot. A player just dropped by dragging stays where it was dropped.
+  const lastPos = useRef<Record<number, Pos>>({});
+  const justDropped = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const moved = pieces.filter(p => lastPos.current[p.id] && lastPos.current[p.id] !== p.pos && p.id !== justDropped.current);
+    if (moved.length) {
+      setSpots(s => {
+        const next = { ...s };
+        for (const p of moved) delete next[p.id];
+        return next;
+      });
+    }
+    const dropped = pieces.find(p => p.id === justDropped.current);
+    if (dropped && lastPos.current[dropped.id] !== dropped.pos) justDropped.current = null; // drop handled
+    lastPos.current = Object.fromEntries(pieces.map(p => [p.id, p.pos]));
+  });
 
   const rect = () => box.current!.getBoundingClientRect();
   const toPt = (e: PointerEvent): Pt => {
@@ -99,7 +117,10 @@ export function Tactics({
       // Only now, with the finger lifted, does the position (and its letters) change.
       const piece = pieces.find(p => p.id === id);
       const pos = nearest(spots[id] ?? cur);
-      if (piece && pos !== piece.pos) onMove(id, pos);
+      if (piece && pos !== piece.pos) {
+        justDropped.current = id;
+        onMove(id, pos);
+      }
     },
     onPointerCancel: () => setDrag(null)
   });
