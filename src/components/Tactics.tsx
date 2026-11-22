@@ -46,21 +46,19 @@ export function Tactics({
   const [ball, setBall] = useState<Pt>(BALL_HOME);
   const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
 
-  // When positions change from the tap "Move to…" menu, snap both players to their
-  // new position's spot. A player just dropped by dragging stays where it was dropped.
+  // When positions change (tap "Move to…" menu or a drop), pieces stay exactly where
+  // they are on the board; only the letters in their circles change. A piece still
+  // sitting on its old spot is pinned there so it doesn't jump to its new one.
   const lastPos = useRef<Record<number, Pos>>({});
-  const justDropped = useRef<number | null>(null);
   useLayoutEffect(() => {
-    const moved = pieces.filter(p => lastPos.current[p.id] && lastPos.current[p.id] !== p.pos && p.id !== justDropped.current);
-    if (moved.length) {
+    const changed = pieces.filter(p => lastPos.current[p.id] && lastPos.current[p.id] !== p.pos);
+    if (changed.length) {
       setSpots(s => {
         const next = { ...s };
-        for (const p of moved) delete next[p.id];
+        for (const p of changed) if (!next[p.id]) next[p.id] = HOME[lastPos.current[p.id]];
         return next;
       });
     }
-    const dropped = pieces.find(p => p.id === justDropped.current);
-    if (dropped && lastPos.current[dropped.id] !== dropped.pos) justDropped.current = null; // drop handled
     lastPos.current = Object.fromEntries(pieces.map(p => [p.id, p.pos]));
   });
 
@@ -69,7 +67,8 @@ export function Tactics({
     const r = rect();
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
   };
-  const at = (p: Piece) => spots[p.id] ?? HOME[p.pos];
+  // lastPos still holds the old position during the render right after a change, so nothing jumps.
+  const at = (p: Piece) => spots[p.id] ?? HOME[lastPos.current[p.id] ?? p.pos];
 
   /** Nearest position spot, measured in real pixels (the pitch is taller than it is wide). */
   const nearest = (pt: Pt): Pos => {
@@ -117,10 +116,7 @@ export function Tactics({
       // Only now, with the finger lifted, does the position (and its letters) change.
       const piece = pieces.find(p => p.id === id);
       const pos = nearest(spots[id] ?? cur);
-      if (piece && pos !== piece.pos) {
-        justDropped.current = id;
-        onMove(id, pos);
-      }
+      if (piece && pos !== piece.pos) onMove(id, pos);
     },
     onPointerCancel: () => setDrag(null)
   });
