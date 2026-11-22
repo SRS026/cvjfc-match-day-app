@@ -153,7 +153,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
           </>
         ) : (
           <>
-            <div class={'pitch' + (tactics ? ' pitch-big' : '')}>
+            <div class={'pitch ' + (tactics ? 'pitch-big' : 'pitch-fill')}>
               <div class="line" style={{ left: 0, right: 0, top: '50%', borderWidth: '3px 0 0 0' }} />
               <div class="line" style={{ left: '50%', top: '50%', width: '80px', height: '80px', margin: '-40px 0 0 -40px', borderRadius: '50%' }} />
               <div class="line" style={{ left: '50%', bottom: '-3px', width: '150px', height: '60px', marginLeft: '-75px' }} />
@@ -305,7 +305,6 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
             </div>
             )}
 
-            {!tactics && <div class="spacer" />}
             <button
               class="btn pbtn subs"
               aria-disabled={!bench.length}

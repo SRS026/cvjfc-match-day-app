@@ -203,6 +203,8 @@ input { user-select: text; -webkit-user-select: text; }
 
 /* ---------- Tactics board (Pitch View, clock button on) ---------- */
 .pitch-big { flex: 1 1 auto; height: auto; }
+/* Clock mode: the pitch soaks up spare height, so the changes box sits evenly between pitch and Make Subs. */
+.pitch-fill { flex-grow: 1; }
 .tactics { position: absolute; inset: 0; }
 .tpiece {
   position: absolute; transform: translate(-50%, -34px);
