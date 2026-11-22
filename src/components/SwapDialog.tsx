@@ -18,10 +18,11 @@ export function SwapDialog(props: {
 }) {
   const { draft, players } = props;
   const t = (id: number) => fmt(draft.snap[id] ?? 0);
-  // Bring on: fewest minutes first. Swap with: most minutes first. (Ties: list order.)
+  // Bring on: fewest minutes first. Swap with: most minutes first. Ties: alphabetical by name.
   const mins = (id: number) => Math.floor(draft.snap[id] ?? 0);
-  const bench = players.filter(p => !p.pos).sort((a, b) => mins(a.id) - mins(b.id) || a.id - b.id);
-  const pitch = players.filter(p => p.pos).sort((a, b) => mins(b.id) - mins(a.id) || a.id - b.id);
+  const abc = (a: Player, b: Player) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) || a.id - b.id;
+  const bench = players.filter(p => !p.pos).sort((a, b) => mins(a.id) - mins(b.id) || abc(a, b));
+  const pitch = players.filter(p => p.pos).sort((a, b) => mins(b.id) - mins(a.id) || abc(a, b));
   const benchP = players.find(p => p.id === draft.bench);
 
   return (
