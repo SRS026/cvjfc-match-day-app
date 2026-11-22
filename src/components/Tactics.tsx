@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { POSITIONS, type Pos } from '../types';
+import type { Pos } from '../types';
 
 type Pt = { x: number; y: number }; // fractions of the pitch box (0–1)
 
@@ -25,19 +25,17 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 /**
  * Tactics board: drag players anywhere on the pitch, plus a football.
- * Dropping a player nearest another position's spot gives them that position
- * (whoever had it takes the dragged player's old one), so the circle letters change.
+ * Dragging only moves pieces around the board. A single tap on a player opens the
+ * "Move to…" menu, which is the only way positions (and the letters) change.
  */
 /** Finger travel (px) before a press counts as a drag rather than a tap. */
 const TAP_SLOP = 8;
 
 export function Tactics({
   pieces,
-  onMove,
   onTap
 }: {
   pieces: Piece[];
-  onMove: (id: number, pos: Pos) => void;
   /** A single press (no drag) on a player: opens the "Move to…" menu. */
   onTap: (id: number) => void;
 }) {
@@ -46,7 +44,7 @@ export function Tactics({
   const [ball, setBall] = useState<Pt>(BALL_HOME);
   const [drag, setDrag] = useState<{ id: number | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
 
-  // When positions change (tap "Move to…" menu or a drop), pieces stay exactly where
+  // When positions change (tap "Move to…" menu), pieces stay exactly where
   // they are on the board; only the letters in their circles change. A piece still
   // sitting on its old spot is pinned there so it doesn't jump to its new one.
   const lastPos = useRef<Record<number, Pos>>({});
@@ -69,18 +67,6 @@ export function Tactics({
   };
   // lastPos still holds the old position during the render right after a change, so nothing jumps.
   const at = (p: Piece) => spots[p.id] ?? HOME[lastPos.current[p.id] ?? p.pos];
-
-  /** Nearest position spot, measured in real pixels (the pitch is taller than it is wide). */
-  const nearest = (pt: Pt): Pos => {
-    const r = rect();
-    let best: Pos = 'CB', d = Infinity;
-    for (const pos of POSITIONS) {
-      const h = HOME[pos];
-      const dd = ((pt.x - h.x) * r.width) ** 2 + ((pt.y - h.y) * r.height) ** 2;
-      if (dd < d) (d = dd), (best = pos);
-    }
-    return best;
-  };
 
   const handlers = (id: number | 'ball', cur: Pt) => ({
     onPointerDown: (e: PointerEvent) => {
@@ -109,14 +95,8 @@ export function Tactics({
       if (!drag || drag.id !== id) return;
       setDrag(null);
       if (id === 'ball') return;
-      if (!drag.moved) {
-        onTap(id);
-        return;
-      }
-      // Only now, with the finger lifted, does the position (and its letters) change.
-      const piece = pieces.find(p => p.id === id);
-      const pos = nearest(spots[id] ?? cur);
-      if (piece && pos !== piece.pos) onMove(id, pos);
+      // Dragging only moves the piece; positions (letters) change only via a single tap.
+      if (!drag.moved) onTap(id);
     },
     onPointerCancel: () => setDrag(null)
   });

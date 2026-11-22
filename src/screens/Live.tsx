@@ -187,7 +187,6 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                     ring: STATUS_COLOURS[status(secs(p.id))].ring,
                     offNext: offIds.includes(p.id)
                   }))}
-                  onMove={actions.movePos}
                   onTap={setMenu}
                 />
               )}
