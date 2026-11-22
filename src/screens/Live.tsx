@@ -307,7 +307,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
 
             {!tactics && <div class="spacer" />}
             <button
-              class="btn pbtn"
+              class="btn pbtn subs"
               aria-disabled={!bench.length}
               style={{ color: '#fff', width: '100%', fontSize: '22px', opacity: bench.length ? 1 : 0.4 }}
               onClick={openManual}

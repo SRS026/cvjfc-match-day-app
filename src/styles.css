@@ -140,7 +140,9 @@ input { user-select: text; -webkit-user-select: text; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .glass::before { content: ''; position: absolute; inset: -4px; } /* 48px touch area */
+/* Make Subs (.pbtn.subs below): same height and shape as End Game on Normal View. */
 .pbtn { border-radius: 14px; padding: 8px 10px; font-size: 16px; line-height: 1.2; min-height: 64px; border: 3px solid var(--yellow); display: flex; align-items: center; justify-content: center; }
+.pbtn.subs { border-radius: 16px; padding: 8px 12px; line-height: 1.1; min-height: 59px; }
 
 /* ---------- Pop-ups ---------- */
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
@@ -178,7 +180,8 @@ input { user-select: text; -webkit-user-select: text; }
   .screen { gap: 10px; }
   .tile { min-height: 63px; }
   .end { min-height: 48px; padding: 8px 12px; line-height: 1.1; }
-  .pitch { height: min(410px, 43dvh); } /* leaves room for Make Subs (button keeps its size) */
+  .pbtn.subs { min-height: 48px; } /* same as End Game */
+  .pitch { height: min(410px, 45dvh); } /* fills the room left above Make Subs */
 }
 
 /* Small phones (e.g. iPhone SE): tighten vertical rhythm so nothing scrolls off. */
