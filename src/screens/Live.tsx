@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { Header } from '../components/Header';
 import { SwapDialog, type SwapDraft } from '../components/SwapDialog';
 import { Tactics } from '../components/Tactics';
@@ -20,10 +20,15 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
   const tactics = hideTimes;
   const [swap, setSwap] = useState<SwapDraft | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
+  // Stop Clock asks first, since the clock stops itself at every 10:00 mark anyway.
+  const [askStop, setAskStop] = useState(false);
 
   const pitchView = live.view === 'pitch';
   const clock = gameSecs(live, now);
   const running = isRunning(live);
+  useEffect(() => {
+    if (!running) setAskStop(false); // clock stopped itself at 10:00: drop the question
+  }, [running]);
   const fullTime = isFullTime(live, now);
   const secs = (id: number) => playerSecs(live, id, now);
   const bySecsDesc = (a: { id: number }, b: { id: number }) =>
@@ -137,7 +142,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 class="btn big"
                 aria-disabled={!running}
                 style={{ background: 'var(--red)', opacity: running ? 1 : 0.45 }}
-                onClick={actions.stopClock}
+                onClick={() => running && setAskStop(true)}
               >
                 Stop Clock
               </button>
@@ -324,6 +329,30 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
             setSwap(null);
           }}
         />
+      )}
+
+      {/* Hidden again if the clock reaches a 10:00 mark and stops on its own while this is open. */}
+      {askStop && running && (
+        <div class="overlay" role="dialog" aria-modal="true" aria-label="Stop the clock?">
+          <div class="dialog">
+            <h2 style={{ fontSize: '22px' }}>Clock will always auto-stop at 10 min intervals. Are you sure you want to continue?</h2>
+            <div class="grid2">
+              <button
+                class="btn dbtn"
+                style={{ background: 'var(--red)', color: '#fff', fontSize: '20px' }}
+                onClick={() => {
+                  actions.stopClock();
+                  setAskStop(false);
+                }}
+              >
+                Yes
+              </button>
+              <button class="btn dbtn outline" style={{ fontSize: '20px' }} onClick={() => setAskStop(false)}>
+                No
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
