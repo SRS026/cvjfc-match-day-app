@@ -298,7 +298,7 @@ export function Live({ live, now, hideTimes, muted }: { live: LiveT; now: number
               <div class="plan-body">
                 <div class="plan-list">
                   {fullTime ? null : changes.length === 0 ? (
-                    <div class="plan-empty">{bench.length ? 'No changes needed' : 'No Subs'}</div>
+                    <div class="plan-empty">{bench.length ? 'No Changes Needed' : 'No Subs'}</div>
                   ) : (
                     changes.map(c => (
                       <div key={c.onId} class="plan-row">
