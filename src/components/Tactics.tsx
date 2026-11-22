@@ -27,6 +27,8 @@ function homeFor(h: number): Record<Pos, Pt> {
   return { ...HOME, GK: { x: 0.5, y: gk }, CB: { x: 0.5, y: cb } };
 }
 const BALL_HOME: Pt = { x: 0.9, y: 0.93 };
+/** Half the ball's drawn size (px). */
+const BALL_R = 15;
 
 export interface Piece {
   id: number;
@@ -95,7 +97,17 @@ export function Tactics({
         setDrag({ ...drag, moved: true });
       }
       const p = toPt(e);
-      const next = { x: clamp(p.x - drag.off.x, 0.05, 0.95), y: clamp(p.y - drag.off.y, 0.04, 0.88) };
+      let next: Pt;
+      if (id === 'ball') {
+        // The ball can go right into any corner: keep just its own radius inside the pitch.
+        const r = rect();
+        const mx = BALL_R / r.width;
+        const my = BALL_R / r.height;
+        next = { x: clamp(p.x - drag.off.x, mx, 1 - mx), y: clamp(p.y - drag.off.y, my, 1 - my) };
+      } else {
+        // Player pieces stop higher up so their name tag stays on the pitch.
+        next = { x: clamp(p.x - drag.off.x, 0.05, 0.95), y: clamp(p.y - drag.off.y, 0.04, 0.88) };
+      }
       if (id === 'ball') setBall(next);
       else setSpots(s => ({ ...s, [id]: next }));
     },
