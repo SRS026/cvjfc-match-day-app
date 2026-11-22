@@ -7,42 +7,76 @@
 
 let ctx: AudioContext | null = null;
 let out: AudioNode | null = null;
+/** Last reading of the audio clock against the wall clock, to spot a context that has frozen. */
+let lastCheck = { audio: 0, wall: 0 };
 
-function setup(): AudioContext | null {
-  if (ctx) return ctx;
+/** Build a brand-new audio context (closing any old one). */
+function create(): AudioContext | null {
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
   // Safari 17+: play like a media app, so the whistle still sounds with the silent switch on.
   const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
   if (session) session.type = 'playback';
-  ctx = new AC();
+  if (ctx) void ctx.close().catch(() => {});
+  const c = new AC();
   // Squash peaks so the whistle can be loud without distorting.
-  const comp = ctx.createDynamicsCompressor();
+  const comp = c.createDynamicsCompressor();
   comp.threshold.value = -18;
   comp.ratio.value = 6;
-  const master = ctx.createGain();
+  const master = c.createGain();
   master.gain.value = 0.9;
-  comp.connect(master).connect(ctx.destination);
+  comp.connect(master).connect(c.destination);
+  ctx = c;
   out = comp;
-  return ctx;
+  mark(c);
+  return c;
 }
 
-/** Wake audio up from inside a tap (the only time iOS allows it). */
-function unlock() {
-  const c = setup();
+function setup(): AudioContext | null {
+  return ctx ?? create();
+}
+
+function mark(c: AudioContext) {
+  lastCheck = { audio: c.currentTime, wall: performance.now() };
+}
+
+/**
+ * iPhones can leave audio dead after an interruption (a notification, Siri, a call, the screen
+ * dimming): the context is "suspended"/"interrupted", or says "running" but its clock has stopped.
+ */
+function broken(c: AudioContext): boolean {
+  if (c.state !== 'running') return true;
+  const wallSecs = (performance.now() - lastCheck.wall) / 1000;
+  const audioSecs = c.currentTime - lastCheck.audio;
+  return wallSecs > 1 && audioSecs < wallSecs * 0.5;
+}
+
+/** Wake audio up from inside a tap (the only time iOS allows it). `fresh` always starts over. */
+function unlock(fresh = false) {
+  let c = setup();
   if (!c) return;
-  if (c.state !== 'running') void c.resume();
+  if (fresh || broken(c)) c = create();
+  if (!c) return;
+  void c.resume().catch(() => {});
   // A silent blip completes the unlock on older iPhones.
   const src = c.createBufferSource();
   src.buffer = c.createBuffer(1, 1, 22050);
   src.connect(c.destination);
   src.start();
+  mark(c);
 }
 
 /** Call once at start-up. */
 export function enableWhistle() {
-  document.addEventListener('pointerdown', unlock, { capture: true, passive: true });
-  document.addEventListener('keydown', unlock, { capture: true, passive: true });
+  const onTap = () => unlock();
+  document.addEventListener('pointerdown', onTap, { capture: true, passive: true });
+  document.addEventListener('keydown', onTap, { capture: true, passive: true });
+}
+
+/** The speaker button was turned on: rebuild audio from scratch inside the tap and blow once. */
+export function testWhistle() {
+  unlock(true);
+  blowWhistle(1);
 }
 
 /** One blast starting at time t (seconds, audio clock), `len` seconds long. */
@@ -108,10 +142,21 @@ function blast(c: AudioContext, dest: AudioNode, t: number, len: number) {
 /** Blow the whistle `times` times (3 = stop, 2 = rolling change). */
 export function blowWhistle(times: number) {
   const c = setup();
-  if (!c || !out || times <= 0) return;
-  if (c.state !== 'running') void c.resume();
-  const LEN = 0.45; // each blast
-  const GAP = 0.2; // between blasts
-  const t0 = c.currentTime + 0.05;
-  for (let i = 0; i < times; i++) blast(c, out, t0 + i * (LEN + GAP), LEN);
+  if (!c || times <= 0) return;
+  const play = () => {
+    if (c !== ctx || !out) return; // replaced meanwhile
+    const LEN = 0.45; // each blast
+    const GAP = 0.2; // between blasts
+    const t0 = c.currentTime + 0.05;
+    for (let i = 0; i < times; i++) blast(c, out, t0 + i * (LEN + GAP), LEN);
+    mark(c);
+  };
+  if (c.state === 'running') return play();
+  // Not awake yet: play as soon as it is, but never more than a moment late.
+  const asked = performance.now();
+  c.resume()
+    .then(() => {
+      if (performance.now() - asked < 1500) play();
+    })
+    .catch(() => {});
 }

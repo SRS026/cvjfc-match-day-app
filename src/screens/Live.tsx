@@ -5,7 +5,7 @@ import { Tactics } from '../components/Tactics';
 import { fmt, gameSecs, isRunning, playerSecs } from '../clock';
 import { STATUS_COLOURS, canApprove, isFullTime, showOffNext, status, suggestionHeader, suggestions } from '../logic';
 import { actions } from '../store';
-import { blowWhistle } from '../whistle';
+import { testWhistle } from '../whistle';
 import { POSITIONS, type Live as LiveT, type Pos } from '../types';
 
 // Formation, as % of the pitch box: FWD top, wingers, CB, GK by the bottom goal.
@@ -85,7 +85,7 @@ export function Live({ live, now, hideTimes, muted }: { live: LiveT; now: number
               aria-pressed={muted}
               onClick={() => {
                 // Turning it back on blows once, so the coach can check the volume.
-                if (muted) blowWhistle(1);
+                if (muted) testWhistle();
                 actions.toggleMute();
               }}
             >
