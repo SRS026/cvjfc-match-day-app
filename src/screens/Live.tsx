@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { Header } from '../components/Header';
 import { SwapDialog, type SwapDraft } from '../components/SwapDialog';
+import { Tactics } from '../components/Tactics';
 import { fmt, gameSecs, isRunning, playerSecs } from '../clock';
 import { STATUS_COLOURS, canApprove, isFullTime, showOffNext, status, suggestionHeader, suggestions } from '../logic';
 import { actions } from '../store';
@@ -15,6 +16,8 @@ const SPOTS: Record<Exclude<Pos, 'GK'>, { left: string; top: string }> = {
 };
 
 export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideTimes: boolean }) {
+  // Clock button on = tactics board: times hidden, changes box collapsed, players draggable.
+  const tactics = hideTimes;
   const [swap, setSwap] = useState<SwapDraft | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
 
@@ -145,7 +148,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
           </>
         ) : (
           <>
-            <div class="pitch">
+            <div class={'pitch' + (tactics ? ' pitch-big' : '')}>
               <div class="line" style={{ left: 0, right: 0, top: '50%', borderWidth: '3px 0 0 0' }} />
               <div class="line" style={{ left: '50%', top: '50%', width: '80px', height: '80px', margin: '-40px 0 0 -40px', borderRadius: '50%' }} />
               <div class="line" style={{ left: '50%', bottom: '-3px', width: '150px', height: '60px', marginLeft: '-75px' }} />
@@ -153,7 +156,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
 
               <button
                 class="btn glass"
-                aria-label={hideTimes ? 'Show player times' : 'Hide player times'}
+                aria-label={tactics ? 'Turn off tactics board' : 'Tactics board (hide times)'}
                 aria-pressed={hideTimes}
                 onClick={actions.toggleTimes}
               >
@@ -164,7 +167,20 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 </svg>
               </button>
 
-              {onPitch.map(p => {
+              {tactics && (
+                <Tactics
+                  pieces={onPitch.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    pos: p.pos as Pos,
+                    ring: STATUS_COLOURS[status(secs(p.id))].ring,
+                    offNext: offIds.includes(p.id)
+                  }))}
+                  onMove={actions.movePos}
+                />
+              )}
+
+              {!tactics && onPitch.map(p => {
                 const pos = p.pos as Pos;
                 const gk = pos === 'GK';
                 const t = secs(p.id);
@@ -196,7 +212,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 );
               })}
 
-              {menuPlayer && (
+              {menuPlayer && !tactics && (
                 <div class="overlay in-pitch" role="dialog" aria-modal="true">
                   <div class="dialog" style={{ padding: '16px' }}>
                     <div style={{ fontSize: '20px', lineHeight: 1.1 }}>Move {menuPlayer.name} to…</div>
@@ -233,6 +249,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
               )}
             </div>
 
+            {!tactics && (
             <div class="plan">
               <div class="plan-head">
                 <div style={{ fontSize: '15px' }}>{head.label}</div>
@@ -271,8 +288,9 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                 </div>
               </div>
             </div>
+            )}
 
-            <div class="spacer" />
+            {!tactics && <div class="spacer" />}
             <button
               class="btn pbtn"
               aria-disabled={!bench.length}

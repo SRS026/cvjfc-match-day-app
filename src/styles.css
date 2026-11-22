@@ -189,3 +189,19 @@ input { user-select: text; -webkit-user-select: text; }
   .plan { gap: 3px; padding: 8px 12px; }
   .pbtn { min-height: 56px; }
 }
+
+/* ---------- Tactics board (Pitch View, clock button on) ---------- */
+.pitch-big { flex: 1 1 auto; height: auto; }
+.tactics { position: absolute; inset: 0; }
+.tpiece {
+  position: absolute; transform: translate(-50%, -34px);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.tpiece.dragging, .ball.dragging { cursor: grabbing; z-index: 3; }
+.tpiece.dragging .disc { transform: scale(1.08); box-shadow: 0 8px 14px rgba(0, 0, 0, 0.35); }
+.ball {
+  position: absolute; transform: translate(-50%, -50%); touch-action: none; cursor: grab;
+  width: 30px; height: 30px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+.ball::before { content: ''; position: absolute; inset: -9px; } /* 48px touch area */
