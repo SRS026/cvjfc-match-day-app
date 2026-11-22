@@ -53,7 +53,6 @@ export function Summary({ live, now }: { live: Live; now: number }) {
         ))}
       </div>
 
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.25)', pointerEvents: 'none' }} />
       <div class="shot-panel" role="dialog" aria-modal="true" aria-label="Take Screenshot?">
         <h2>Take Screenshot?</h2>
         <div class="grid2">

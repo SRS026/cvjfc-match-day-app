@@ -163,8 +163,8 @@ input { user-select: text; -webkit-user-select: text; }
 .sum-row .bar div { height: 100%; border-radius: 8px; }
 .sum-row .t { width: 56px; text-align: right; font-size: 22px; font-variant-numeric: tabular-nums; }
 .shot-panel {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom));
-  width: calc(100% - 32px); max-width: 448px; z-index: 11;
+  /* Sits below the stats card (pushed to the bottom of the screen), so it never covers a player. */
+  margin-top: auto;
   background: #fff; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 14px;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
 }
