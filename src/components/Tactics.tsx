@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Pos } from '../types';
 
 type Pt = { x: number; y: number }; // fractions of the pitch box (0–1)
@@ -8,9 +8,24 @@ const HOME: Record<Pos, Pt> = {
   FWD: { x: 0.5, y: 0.12 },
   LW: { x: 0.185, y: 0.32 },
   RW: { x: 0.815, y: 0.32 },
-  CB: { x: 0.5, y: 0.54 },
-  GK: { x: 0.5, y: 0.79 }
+  CB: { x: 0.5, y: 0.59 },
+  GK: { x: 0.5, y: 0.825 }
 };
+/** Room (px) a piece needs below its circle centre: circle and name tag (no OFF NEXT on the board). */
+const BELOW = 72;
+/** Gap (px) needed between the CB centre and the GK centre so their labels don't touch. */
+const CB_GK_GAP = 104;
+
+/**
+ * Start spots for a pitch of height h (px). GK and CB sit well back, but on short
+ * pitches (small phones) they're pulled up just enough that nothing is cut off or overlaps.
+ */
+function homeFor(h: number): Record<Pos, Pt> {
+  if (!h) return HOME;
+  const gk = Math.min(HOME.GK.y, (h - BELOW) / h);
+  const cb = Math.min(HOME.CB.y, gk - CB_GK_GAP / h);
+  return { ...HOME, GK: { x: 0.5, y: gk }, CB: { x: 0.5, y: cb } };
+}
 const BALL_HOME: Pt = { x: 0.9, y: 0.93 };
 
 export interface Piece {
@@ -18,7 +33,6 @@ export interface Piece {
   name: string;
   pos: Pos;
   ring: string;
-  offNext: boolean;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -45,12 +59,22 @@ export function Tactics({
   const [ball, setBall] = useState<Pt>(BALL_HOME);
   const [drag, setDrag] = useState<{ id: Pos | 'ball'; off: Pt; x0: number; y0: number; moved: boolean } | null>(null);
 
+  // Track the pitch height so the start spots fit any phone.
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const el = box.current!;
+    const ro = new ResizeObserver(() => setH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const home = homeFor(h);
+
   const rect = () => box.current!.getBoundingClientRect();
   const toPt = (e: PointerEvent): Pt => {
     const r = rect();
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
   };
-  const at = (pos: Pos) => spots[pos] ?? HOME[pos];
+  const at = (pos: Pos) => spots[pos] ?? home[pos];
 
   const handlers = (id: Pos | 'ball', cur: Pt) => ({
     onPointerDown: (e: PointerEvent) => {
@@ -111,7 +135,6 @@ export function Tactics({
               {p.pos}
             </div>
             <div class="tag">{p.name}</div>
-            {p.offNext && <div class="offnext">OFF NEXT</div>}
           </div>
         );
       })}

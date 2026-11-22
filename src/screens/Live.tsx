@@ -184,8 +184,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                     id: p.id,
                     name: p.name,
                     pos: p.pos as Pos,
-                    ring: STATUS_COLOURS[status(secs(p.id))].ring,
-                    offNext: offIds.includes(p.id)
+                    ring: STATUS_COLOURS[status(secs(p.id))].ring
                   }))}
                   onTap={setMenu}
                 />
