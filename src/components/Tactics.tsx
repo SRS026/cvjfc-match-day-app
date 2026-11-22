@@ -9,7 +9,7 @@ const HOME: Record<Pos, Pt> = {
   LW: { x: 0.185, y: 0.32 },
   RW: { x: 0.815, y: 0.32 },
   CB: { x: 0.5, y: 0.59 },
-  GK: { x: 0.5, y: 0.825 }
+  GK: { x: 0.5, y: 0.85 }
 };
 /** Room (px) a piece needs below its circle centre: circle and name tag (no OFF NEXT on the board). */
 const BELOW = 72;
