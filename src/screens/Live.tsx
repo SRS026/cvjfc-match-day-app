@@ -246,7 +246,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
                     changes.map(c => (
                       <div key={c.onId} class="plan-row">
                         <span style={{ color: '#7EE2A8' }}>{c.onName} On</span>
-                        <span style={{ color: 'var(--red)' }}>{c.offName} Off</span>
+                        <span style={{ color: '#FF8A95' }}>{c.offName} Off</span>
                       </div>
                     ))
                   )}

@@ -16,7 +16,7 @@ export function status(secs: number): Status {
 export const STATUS_COLOURS: Record<Status, { bg: string; border: string; text: string; ring: string }> = {
   green: { bg: '#157A42', border: '#157A42', text: '#157A42', ring: '#34C46F' },
   orange: { bg: '#F28C28', border: '#D96F0E', text: '#B35400', ring: '#F28C28' },
-  red: { bg: '#C62034', border: '#C62034', text: '#C62034', ring: '#C62034' }
+  red: { bg: '#C62034', border: '#C62034', text: '#C62034', ring: '#FF5A6E' }
 };
 
 // ---------- Squad → players ----------
