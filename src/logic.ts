@@ -16,7 +16,7 @@ export function status(secs: number): Status {
 export const STATUS_COLOURS: Record<Status, { bg: string; border: string; text: string; ring: string }> = {
   green: { bg: '#157A42', border: '#157A42', text: '#157A42', ring: '#34C46F' },
   orange: { bg: '#F28C28', border: '#D96F0E', text: '#B35400', ring: '#F28C28' },
-  red: { bg: '#C62034', border: '#C62034', text: '#C62034', ring: '#FF5A6E' }
+  red: { bg: '#C62034', border: '#C62034', text: '#C62034', ring: '#C62034' }
 };
 
 // ---------- Squad → players ----------
@@ -119,9 +119,23 @@ function nextPoint(c: number): number {
  * now (at a stop awaiting approval, or inside a rolling window), or the next point.
  */
 function planTarget(live: Live, now: number): number {
-  const c = gameSecs(live, now);
-  if (pendingStop(live, now) || rollingNow(c) !== null) return c;
-  return nextPoint(c);
+  return changeMoment(live, now) !== null ? gameSecs(live, now) : nextPoint(gameSecs(live, now));
+}
+
+/** Inside a 25:00 / 35:00 rolling window that hasn't been approved or rejected yet. */
+function pendingRolling(live: Live, now: number): number | null {
+  const r = rollingNow(gameSecs(live, now));
+  return r !== null && !live.approvedAt.includes(r) ? r : null;
+}
+
+/**
+ * The change moment awaiting a decision (its game-second key), or null:
+ * an unanswered 10/20/30 stop, or an unanswered 25:00 / 35:00 rolling window.
+ * Approve or Reject records this key in approvedAt, so each moment is decided once.
+ */
+export function changeMoment(live: Live, now: number): number | null {
+  if (pendingStop(live, now)) return Math.round(gameSecs(live, now));
+  return pendingRolling(live, now);
 }
 
 /**
@@ -147,24 +161,26 @@ export function suggestions(live: Live, now: number): Change[] {
 
 // ---------- Gating ----------
 
-/** Approve is only live at a 10/20/30 stop, once per stop, and only if there's a change worth making. */
+/**
+ * Approve / Reject are live at a 10/20/30 stop or in a 25:00 / 35:00 rolling window,
+ * once per moment, and only when there's a change worth making.
+ */
 export function canApprove(live: Live, now: number): boolean {
-  return pendingStop(live, now) && suggestions(live, now).length > 0;
+  return changeMoment(live, now) !== null && suggestions(live, now).length > 0;
 }
 
-/** OFF NEXT: at a 10/20/30 stop until approved, and during the 25:00 and 35:00 rolling windows. */
+/** OFF NEXT shows exactly while a change is waiting for Approve or Reject. */
 export function showOffNext(live: Live, now: number): boolean {
-  const c = gameSecs(live, now);
-  return (pendingStop(live, now) || rollingNow(c) !== null) && suggestions(live, now).length > 0;
+  return canApprove(live, now);
 }
 
 export function suggestionHeader(live: Live, now: number): { label: string; countdown: string } {
   const c = gameSecs(live, now);
   if (isFullTime(live, now)) return { label: 'Full time', countdown: '0:00' };
   const pending = suggestions(live, now).length > 0;
-  if (pending && pendingStop(live, now)) return { label: `Stoppage Changes Now (${Math.round(c / 60)}:00)`, countdown: '0:00' };
-  const r = rollingNow(c);
   const next = nextPoint(c);
+  if (pending && pendingStop(live, now)) return { label: `Stoppage Changes Now (${Math.round(c / 60)}:00)`, countdown: '0:00' };
+  const r = pendingRolling(live, now);
   if (pending && r !== null) return { label: `Rolling Changes Now (${r / 60}:00)`, countdown: fmt(Math.max(0, next - c)) };
   const kind = next >= FULL ? 'Full Time' : ROLLING.includes(next) ? 'Rolling Changes' : 'Stoppage Changes';
   return { label: `${kind} @ ${next / 60}:00`, countdown: fmt(Math.max(0, next - c)) };

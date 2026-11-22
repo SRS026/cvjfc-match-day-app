@@ -14,7 +14,7 @@ const SPOTS: Record<Exclude<Pos, 'GK'>, { left: string; top: string }> = {
   CB: { left: '50%', top: '46%' }
 };
 
-export function Live({ live, now }: { live: LiveT; now: number }) {
+export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideTimes: boolean }) {
   const [swap, setSwap] = useState<SwapDraft | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
 
@@ -30,7 +30,7 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
   const bench = live.players.filter(p => !p.pos);
   const changes = suggestions(live, now);
   const offIds = showOffNext(live, now) ? changes.map(c => c.offId) : [];
-  const approveOk = canApprove(live, now);
+  const decideOk = canApprove(live, now); // Approve / Reject
   const head = suggestionHeader(live, now);
 
   const snap = () => Object.fromEntries(live.players.map(p => [p.id, secs(p.id)]));
@@ -151,6 +151,19 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
               <div class="line" style={{ left: '50%', bottom: '-3px', width: '150px', height: '60px', marginLeft: '-75px' }} />
               <div class="line" style={{ left: '50%', top: '-3px', width: '150px', height: '60px', marginLeft: '-75px' }} />
 
+              <button
+                class="btn glass"
+                aria-label={hideTimes ? 'Show player times' : 'Hide player times'}
+                aria-pressed={hideTimes}
+                onClick={actions.toggleTimes}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 7.5V12l3 2" />
+                  {hideTimes && <path d="M4 4l16 16" />}
+                </svg>
+              </button>
+
               {onPitch.map(p => {
                 const pos = p.pos as Pos;
                 const gk = pos === 'GK';
@@ -170,11 +183,14 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
                     >
                       {pos}
                     </button>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: gk ? 'flex-start' : 'center', gap: '4px' }}>
-                      <div class="tag">
-                        {p.name} {fmt(t)}
-                      </div>
-                      {offIds.includes(p.id) && <div class="offnext">OFF NEXT</div>}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <div class="tag">{hideTimes ? p.name : `${p.name} ${fmt(t)}`}</div>
+                      {offIds.includes(p.id) && (
+                        // GK: hang evenly either side of a short name so the name itself never moves.
+                        <div class="offnext" style={gk ? { margin: '0 -40px' } : undefined}>
+                          OFF NEXT
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -222,36 +238,49 @@ export function Live({ live, now }: { live: LiveT; now: number }) {
                 <div style={{ fontSize: '15px' }}>{head.label}</div>
                 <div style={{ fontSize: '22px', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{head.countdown}</div>
               </div>
-              {changes.length === 0 && (
-                <div style={{ fontSize: '15px', opacity: 0.75 }}>{bench.length ? 'No changes needed' : 'No Subs'}</div>
-              )}
-              {changes.map(c => (
-                <div key={c.onId} class="plan-row">
-                  <span style={{ color: '#7EE2A8' }}>{c.onName} On</span>
-                  <span style={{ color: '#FF8A95' }}>{c.offName} Off</span>
+              <div class="plan-body">
+                <div class="plan-list">
+                  {changes.length === 0 ? (
+                    <div class="plan-empty">{bench.length ? 'No changes needed' : 'No Subs'}</div>
+                  ) : (
+                    changes.map(c => (
+                      <div key={c.onId} class="plan-row">
+                        <span style={{ color: '#7EE2A8' }}>{c.onName} On</span>
+                        <span style={{ color: 'var(--red)' }}>{c.offName} Off</span>
+                      </div>
+                    ))
+                  )}
                 </div>
-              ))}
+                <div class="plan-actions">
+                  <button
+                    class="btn decide"
+                    aria-disabled={!decideOk}
+                    style={{ background: 'var(--yellow)', color: 'var(--black)', opacity: decideOk ? 1 : 0.4 }}
+                    onClick={actions.approve}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="btn decide"
+                    aria-disabled={!decideOk}
+                    style={{ color: '#fff', opacity: decideOk ? 1 : 0.4 }}
+                    onClick={actions.reject}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="spacer" />
-            <div class="grid2">
-              <button
-                class="btn pbtn"
-                aria-disabled={!bench.length}
-                style={{ color: '#fff', opacity: bench.length ? 1 : 0.4 }}
-                onClick={openManual}
-              >
-                Make Manual Changes
-              </button>
-              <button
-                class="btn pbtn"
-                aria-disabled={!approveOk}
-                style={{ background: 'var(--yellow)', color: 'var(--black)', opacity: approveOk ? 1 : 0.4 }}
-                onClick={actions.approve}
-              >
-                Approve Suggested Changes
-              </button>
-            </div>
+            <button
+              class="btn pbtn"
+              aria-disabled={!bench.length}
+              style={{ color: '#fff', width: '100%', opacity: bench.length ? 1 : 0.4 }}
+              onClick={openManual}
+            >
+              Make Manual Changes
+            </button>
           </>
         )}
       </div>

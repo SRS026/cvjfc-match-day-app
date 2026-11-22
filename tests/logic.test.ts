@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gameSecs, nextStop, playerSecs, settle } from '../src/clock';
-import { canApprove, playersFromSquad, showOffNext, status, suggestionHeader, suggestions } from '../src/logic';
+import { canApprove, changeMoment, playersFromSquad, showOffNext, status, suggestionHeader, suggestions } from '../src/logic';
 import type { Live } from '../src/types';
 
 const squad = ['A', 'B', 'C', 'D', 'E', 'S1', 'S2', 'S3'];
@@ -136,7 +136,11 @@ describe('approve and OFF NEXT gating', () => {
     l.clock.base = 35 * 60;
     expect(showOffNext(l, T0)).toBe(true);
     expect(suggestionHeader(l, T0)).toEqual({ label: 'Rolling Changes Now (35:00)', countdown: '5:00' });
-    expect(canApprove(l, T0)).toBe(false); // no Approve for rolling changes
+    expect(canApprove(l, T0)).toBe(true); // Approve / Reject live in the rolling window
+    l.approvedAt.push(2100); // approved or rejected
+    expect(canApprove(l, T0)).toBe(false);
+    expect(showOffNext(l, T0)).toBe(false);
+    expect(suggestionHeader(l, T0).label).toBe('Full Time @ 40:00');
     l.clock.base = 2400;
     expect(showOffNext(l, T0)).toBe(false);
     expect(canApprove(l, T0)).toBe(false);
@@ -150,6 +154,27 @@ describe('rolling changes and fairness', () => {
     l.players.forEach(p => (p.secs = 1200)); // everyone level
     expect(suggestions(l, T0)).toHaveLength(0);
     expect(canApprove(l, T0)).toBe(false);
+  });
+
+  it('Approve / Reject stay greyed out between change moments', () => {
+    const l = newLive();
+    l.players.forEach(p => (p.secs = p.pos ? 1300 : 900));
+    l.clock.base = 1320; // 22:00, between the 20:00 stop and 25:00
+    l.approvedAt.push(600, 1200);
+    expect(suggestions(l, T0).length).toBeGreaterThan(0); // previewed...
+    expect(canApprove(l, T0)).toBe(false); // ...but not yet actionable
+    expect(showOffNext(l, T0)).toBe(false);
+  });
+
+  it('rejecting at a stop keeps everyone and moves on to the next change', () => {
+    const l = newLive();
+    l.players.forEach(p => (p.secs = p.pos ? 600 : 0));
+    l.clock.base = 600;
+    expect(changeMoment(l, T0)).toBe(600);
+    l.approvedAt.push(600); // Reject records the moment without swapping
+    expect(changeMoment(l, T0)).toBeNull();
+    expect(l.players.filter(p => p.pos).map(p => p.name)).toEqual(['A', 'B', 'C', 'D', 'E']);
+    expect(suggestionHeader(l, T0).label).toBe('Stoppage Changes @ 20:00');
   });
 
   it('after the 20:00 stop, previews the 25:00 rolling change', () => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { FULL, gameSecs, isRunning, nextStop, settle } from './clock';
-import { canApprove, otherGame, playersFromSquad, suggestions } from './logic';
+import { canApprove, changeMoment, otherGame, playersFromSquad, suggestions } from './logic';
 import type { AppState, GameNo, Live, Pos, View } from './types';
 
 const KEY = 'cvjfc-matchday-v1';
@@ -149,12 +149,27 @@ export const actions = {
     });
   },
 
+  /** Make the suggested swaps for this stoppage / rolling moment (clock is left as it is). */
   approve() {
     liveUpdate((l, now) => {
-      if (!canApprove(l, now)) return;
+      const moment = changeMoment(l, now);
+      if (moment === null || !canApprove(l, now)) return;
       for (const c of suggestions(l, now)) swapIn(l, c.onId, c.offId, now);
-      l.approvedAt.push(Math.round(gameSecs(l, now)));
+      l.approvedAt.push(moment);
     });
+  },
+
+  /** Keep everyone where they are for this moment; clears OFF NEXT until the next one. */
+  reject() {
+    liveUpdate((l, now) => {
+      const moment = changeMoment(l, now);
+      if (moment === null || !canApprove(l, now)) return;
+      l.approvedAt.push(moment);
+    });
+  },
+
+  toggleTimes() {
+    update(s => void (s.hideTimes = !s.hideTimes));
   },
 
   /**

@@ -32,7 +32,7 @@ export interface Live {
   game: GameNo;
   players: Player[];
   clock: Clock;
-  /** Stops (in game seconds) where suggested changes were already approved. */
+  /** Change moments (stop second, or 1500 / 2100 for rolling) already approved or rejected. */
   approvedAt: number[];
   view: View;
   /** True while the Full Time Summary / Take Screenshot pop-up is showing. */
@@ -45,4 +45,6 @@ export interface AppState {
   screen: 'home' | 'live';
   squads: Record<GameNo, string[]>;
   live: Live | null;
+  /** Pitch View: hide each player's minutes (device preference). */
+  hideTimes?: boolean;
 }
