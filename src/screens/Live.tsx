@@ -77,10 +77,10 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
         </Header>
 
         <div class="tabs" style={{ background: theme.toggle }}>
-          <button class="btn tab" style={{ fontSize: '20px', lineHeight: 1, ...(pitchView ? off : on) }} onClick={() => actions.setView('normal')}>
+          <button class="btn tab" style={{ fontSize: '18px', lineHeight: 1, ...(pitchView ? off : on) }} onClick={() => actions.setView('normal')}>
             Normal View
           </button>
-          <button class="btn tab" style={{ fontSize: '20px', lineHeight: 1, ...(pitchView ? on : off) }} onClick={() => actions.setView('pitch')}>
+          <button class="btn tab" style={{ fontSize: '18px', lineHeight: 1, ...(pitchView ? on : off) }} onClick={() => actions.setView('pitch')}>
             Pitch View
           </button>
         </div>

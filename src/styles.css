@@ -33,7 +33,7 @@ input { user-select: text; -webkit-user-select: text; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  padding: calc(18px + env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
 }
 
 .btn {
@@ -172,6 +172,14 @@ input { user-select: text; -webkit-user-select: text; }
 .sbtn { border-radius: 14px; padding: 14px; min-height: 56px; font-size: 22px; display: flex; align-items: center; justify-content: center; }
 .toast-wrap { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.65); display: flex; align-items: center; justify-content: center; z-index: 20; }
 .toast { background: var(--black); color: #fff; border-radius: 16px; padding: 14px 20px; font-size: 17px; }
+
+/* iPhone 14/15-sized phones: just enough tightening that End Game fits without scrolling. */
+@media (max-height: 860px) {
+  .screen { gap: 10px; }
+  .tile { min-height: 63px; }
+  .end { min-height: 48px; padding: 8px 12px; line-height: 1.1; }
+  .pitch { height: min(410px, 43dvh); } /* leaves room for Make Subs (button keeps its size) */
+}
 
 /* Small phones (e.g. iPhone SE): tighten vertical rhythm so nothing scrolls off. */
 @media (max-height: 700px) {
