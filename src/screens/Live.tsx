@@ -304,7 +304,7 @@ export function Live({ live, now, hideTimes }: { live: LiveT; now: number; hideT
             <button
               class="btn pbtn"
               aria-disabled={!bench.length}
-              style={{ color: '#fff', width: '100%', opacity: bench.length ? 1 : 0.4 }}
+              style={{ color: '#fff', width: '100%', fontSize: '22px', opacity: bench.length ? 1 : 0.4 }}
               onClick={openManual}
             >
               Make Subs
