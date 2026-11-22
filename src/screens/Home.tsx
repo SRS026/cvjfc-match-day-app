@@ -34,7 +34,7 @@ export function Home({ state }: { state: AppState }) {
             role="tab"
             aria-selected={tab === g}
             class="btn tab"
-            style={tab === g ? { background: 'var(--yellow)', color: 'var(--black)' } : { color: '#fff' }}
+            style={{ fontSize: '17px', lineHeight: 1, ...(tab === g ? { background: 'var(--yellow)', color: 'var(--black)' } : { color: '#fff' }) }}
             onClick={() => actions.setTab(g)}
           >
             Game {g}
